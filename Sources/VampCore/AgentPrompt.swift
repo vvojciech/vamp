@@ -21,7 +21,9 @@ public enum AgentPrompt {
     A song has a tempo in BPM and layers. Each layer is ONE Strudel pattern expression. Vamp wraps \
     every layer as stack((layer).postgain(gain)) and sets the tempo, so one cycle is one bar of 4 beats.
     Never write setcps, setcpm, samples(), hush(), .play(), let, const, or more than one statement.
-    Use double quotes for mini-notation strings. Keep each layer under 12 lines.
+    Use double quotes for mini-notation strings. Keep each layer under 12 lines. When a layer has more \
+    than three methods, put the sound source on the first line and each group of related methods on its \
+    own line, indented two spaces and starting with a dot.
 
     EDIT OPS
     add_layer: name, role, code (gain optional, default 0.8).

@@ -87,7 +87,7 @@ private struct EntryView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(entry.summary).font(.callout).foregroundStyle(Theme.text.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
-                    ChangeChips(changes: entry.changes, song: app.song)
+                    ChangeChips(changes: entry.changes, songs: [app.song, entry.songBefore])
                     Footer(entry: entry)
                 }
                 .padding(.leading, 4)
@@ -107,45 +107,76 @@ private struct EntryView: View {
 
 private struct ChangeChips: View {
     let changes: [EditPlan.Change]
-    let song: Song
+    /// The song now, then the song before the prompt, for layers that no longer exist.
+    let songs: [Song]
 
     var body: some View {
         if !changes.isEmpty {
-            FlowRow(items: changes.map(describe))
+            Flow(spacing: 6) {
+                ForEach(Array(changes.enumerated()), id: \.offset) { _, change in
+                    let (symbol, text, tint) = describe(change)
+                    Label(text, systemImage: symbol)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(tint)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Capsule().fill(tint.opacity(0.13)))
+                }
+            }
         }
     }
 
+    private func layer(_ id: String) -> Layer? {
+        songs.lazy.compactMap { $0.layers.first { $0.id == id } }.first
+    }
+
     private func describe(_ change: EditPlan.Change) -> (String, String, Color) {
-        func name(_ id: String) -> String { song.layers.first { $0.id == id }?.name ?? id }
-        func tint(_ id: String) -> Color { song.layers.first { $0.id == id }.map { Theme.color(for: $0.role) } ?? Theme.muted }
+        func name(_ id: String) -> String { layer(id)?.name ?? id }
+        func tint(_ id: String) -> Color { layer(id).map { Theme.color(for: $0.role) } ?? Theme.muted }
         switch change {
         case let .added(id): return ("plus", name(id), tint(id))
         case let .changed(id): return ("pencil", name(id), tint(id))
-        case let .removed(id): return ("minus", id, Theme.muted)
-        case .tempo: return ("metronome", "\(Int(song.bpm)) BPM", Theme.muted)
+        case let .removed(id): return ("minus", name(id), Theme.muted)
+        case .tempo: return ("metronome", "Tempo", Theme.muted)
         case .title: return ("textformat", "Title", Theme.muted)
         }
     }
 }
 
-private struct FlowRow: View {
-    let items: [(String, String, Color)]
+/// Lays chips out left to right and wraps to a new line when the row is full.
+private struct Flow: Layout {
+    var spacing: CGFloat
 
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 6) { chips }
-            VStack(alignment: .leading, spacing: 6) { chips }
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
+        return CGSize(width: rows.map(\.width).max() ?? 0, height: rows.last.map { $0.y + $0.height } ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for row in arrange(width: bounds.width, subviews: subviews) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: bounds.minY + row.y), proposal: .unspecified)
+                x += size.width + spacing
+            }
         }
     }
 
-    @ViewBuilder private var chips: some View {
-        ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-            Label(item.1, systemImage: item.0)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(item.2)
-                .padding(.horizontal, 8).padding(.vertical, 4)
-                .background(Capsule().fill(item.2.opacity(0.13)))
+    private func arrange(width: CGFloat, subviews: Subviews) -> [(indices: [Int], y: CGFloat, width: CGFloat, height: CGFloat)] {
+        var rows: [(indices: [Int], y: CGFloat, width: CGFloat, height: CGFloat)] = []
+        var current: (indices: [Int], y: CGFloat, width: CGFloat, height: CGFloat) = ([], 0, 0, 0)
+        for (index, subview) in subviews.enumerated() {
+            let size = subview.sizeThatFits(.unspecified)
+            if !current.indices.isEmpty && current.width + spacing + size.width > width {
+                rows.append(current)
+                current = ([], current.y + current.height + spacing, 0, 0)
+            }
+            current.width += (current.indices.isEmpty ? 0 : spacing) + size.width
+            current.height = max(current.height, size.height)
+            current.indices.append(index)
         }
+        if !current.indices.isEmpty { rows.append(current) }
+        return rows
     }
 }
 

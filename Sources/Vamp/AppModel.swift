@@ -159,8 +159,7 @@ final class AppModel {
         let text = request.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isAgentWorking else { return }
         let kind = backend, chosen = model
-        let modelLabel = kind.models.first { $0.id == chosen }?.label ?? chosen
-        chat.append(ChatEntry(request: text, backend: modelLabel, songBefore: song))
+        chat.append(ChatEntry(request: text, backend: kind.displayName(model: chosen), songBefore: song))
         let history = chat.filter { $0.state == .done }.map { Turn(request: $0.request, summary: $0.summary) }
         let started = Date()
         let engine = engine

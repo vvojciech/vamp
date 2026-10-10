@@ -26,8 +26,18 @@ enum BackendKind: String, CaseIterable, Identifiable, Codable {
     var models: [(id: String, label: String)] {
         switch self {
         case .claudeCLI: [("haiku", "Haiku"), ("sonnet", "Sonnet"), ("opus", "Opus")]
-        case .codexCLI: [("", "Codex default")] + Self.codexModels.map { ($0, $0) }
+        case .codexCLI: [("", "default")] + Self.codexModels.map { ($0, $0) }
         case .anthropicAPI: APIModel.allCases.map { ($0.rawValue, $0.label) }
+        }
+    }
+
+    /// A short name for the log and the picker, such as "Claude Haiku" or "Codex".
+    func displayName(model: String) -> String {
+        let label = models.first { $0.id == model }?.label ?? model
+        switch self {
+        case .claudeCLI: return "Claude \(label)"
+        case .codexCLI: return model.isEmpty ? "Codex" : "Codex \(label)"
+        case .anthropicAPI: return "\(label) (API)"
         }
     }
 

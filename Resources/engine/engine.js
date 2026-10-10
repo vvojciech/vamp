@@ -83,7 +83,9 @@
   async function init() {
     try {
       repl = await S.initStrudel({
-        prebake: () => S.samples('github:tidalcycles/dirt-samples'),
+        // Offline, the synths still work; sample layers then report an unknown sound.
+        prebake: () => S.samples('github:tidalcycles/dirt-samples').catch((error) =>
+          post({ type: 'log', message: `Samples did not load: ${error?.message ?? error}` })),
       });
       setKnownSounds(Object.keys(S.soundMap.get()));
       post({ type: 'ready', sounds: knownSounds.size });

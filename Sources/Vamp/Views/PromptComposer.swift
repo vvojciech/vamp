@@ -71,14 +71,7 @@ struct PromptComposer: View {
         .onAppear { focused = true }
     }
 
-    private var currentLabel: String {
-        let model = app.backend.models.first { $0.id == app.model }?.label ?? app.model
-        switch app.backend {
-        case .claudeCLI: return "Claude · \(model)"
-        case .codexCLI: return "Codex · \(model)"
-        case .anthropicAPI: return "API · \(model)"
-        }
-    }
+    private var currentLabel: String { app.backend.displayName(model: app.model) }
 
     private func send() {
         guard !app.isAgentWorking else { return }
