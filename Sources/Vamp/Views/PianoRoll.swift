@@ -92,7 +92,7 @@ struct PianoRoll: View {
                 let resolved = context.resolve(text)
                 let textSize = resolved.measure(in: size)
                 let pill = CGRect(x: 3, y: inset + y - textSize.height / 2 - 1.5, width: textSize.width + 8, height: textSize.height + 3)
-                context.fill(Path(roundedRect: pill, cornerRadius: 3), with: .color(Theme.lane.opacity(0.92)))
+                context.fill(Path(roundedRect: pill, cornerRadius: 3), with: .color(Theme.lane))
                 context.draw(resolved, at: CGPoint(x: 7, y: inset + y), anchor: .leading)
             }
         }
