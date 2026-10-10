@@ -1,0 +1,13 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Vamp engine</title></head>
+<body>
+<script>
+  window.addEventListener('error', (e) => window.webkit?.messageHandlers?.vamp?.postMessage({ type: 'log', message: String(e.message) }));
+  window.addEventListener('unhandledrejection', (e) => window.webkit?.messageHandlers?.vamp?.postMessage({ type: 'log', message: String(e.reason?.message ?? e.reason) }));
+</script>
+<script src="strudel.js"></script>
+<script src="engine.js"></script>
+<script>window.vamp.init();</script>
+</body>
+</html>

@@ -92,7 +92,7 @@ public extension Song {
         Layer(id: "bass", name: "Bass", role: .bass,
               code: "note(\"<c2 c2 ab1 bb1>*8\")\n  .s(\"sawtooth\").lpf(sine.range(300, 1400).slow(8)).lpq(6)\n  .decay(0.18).sustain(0)", gain: 0.7),
         Layer(id: "chords", name: "Chords", role: .chords,
-              code: "chord(\"<Cm9 Abmaj7 Fm9 Bb7>\").voicing()\n  .s(\"supersaw\").lpf(1600).attack(0.08).release(0.8)\n  .room(0.5).gain(0.3)", gain: 0.6),
+              code: "chord(\"<Cm9 Ab^7 Fm9 Bb7>\").voicing()\n  .s(\"supersaw\").lpf(1600).attack(0.08).release(0.8)\n  .room(0.5).gain(0.3)", gain: 0.6),
         Layer(id: "arp", name: "Arp", role: .arp,
               code: "n(\"0 2 4 [7 9] 4 2 [0 -3] ~\").scale(\"<C4:minor Ab3:major F3:minor Bb3:mixolydian>\")\n  .s(\"triangle\").decay(0.2).sustain(0)\n  .delay(0.35).delaytime(0.1875).room(0.3)", gain: 0.5),
     ])

@@ -1,0 +1,122 @@
+// Vamp's bridge between Swift and Strudel. Swift calls window.vamp.*; results go back
+// through the "vamp" message handler. Kept free of DOM work so Node can test it.
+(() => {
+  const S = globalThis.strudel;
+  const post = (message) => globalThis.webkit?.messageHandlers?.vamp?.postMessage(message);
+  const MAX_EVENTS = 1500;
+  let repl = null;
+  let knownSounds = null;
+
+  function patternFor(code) {
+    const { output } = S.transpiler(code, { wrapAsync: false, addReturn: true });
+    const pattern = new Function(output)();
+    if (!pattern || typeof pattern.queryArc !== 'function') {
+      throw new Error('This code does not make a pattern.');
+    }
+    return pattern;
+  }
+
+  function toMidi(value) {
+    if (value == null) return null;
+    if (typeof value === 'number') return value;
+    try { return S.noteToMidi(String(value)); } catch { return null; }
+  }
+
+  function describe(hap) {
+    const v = hap.value;
+    const obj = typeof v === 'object' && v !== null ? v : { note: v };
+    let midi = toMidi(obj.note);
+    if (midi == null && typeof obj.freq === 'number') midi = 69 + 12 * Math.log2(obj.freq / 440);
+    const sound = obj.s != null ? String(obj.s) + (obj.n != null && midi == null ? `:${obj.n}` : '') : null;
+    return {
+      begin: hap.whole.begin.valueOf(),
+      end: hap.whole.end.valueOf(),
+      midi: midi == null || Number.isNaN(midi) ? null : Math.round(midi * 100) / 100,
+      sound,
+      gain: typeof obj.gain === 'number' ? obj.gain : 1,
+    };
+  }
+
+  function unknownSound(events) {
+    if (!knownSounds) return null;
+    for (const e of events) {
+      if (!e.sound) continue;
+      const name = e.sound.split(':')[0];
+      if (!knownSounds.has(name)) return `Unknown sound "${name}".`;
+    }
+    return null;
+  }
+
+  // Strudel only logs a warning for an unknown chord, so check the symbols up front.
+  function unknownChord(code) {
+    const known = S.voicingRegistry?.ireal?.dictionary;
+    if (!known) return null;
+    for (const match of code.matchAll(/chord\(\s*["'`]([^"'`]*)["'`]/g)) {
+      for (const token of match[1].split(/[\s<>[\]{},|.@!?~*/:]+/)) {
+        const symbol = /^[A-G][#b]?(.*)$/.exec(token);
+        if (symbol && !(symbol[1] in known)) return `Unknown chord "${token}". Use symbols like C^7, Cm7, C7, Cm9.`;
+      }
+    }
+    return null;
+  }
+
+  // Returns [{id, events} | {id, error}] for the first `cycles` bars of each layer.
+  function analyze(layers, cycles) {
+    return layers.map(({ id, code }) => {
+      try {
+        const chordError = unknownChord(code);
+        if (chordError) return { id, error: chordError };
+        const haps = patternFor(code).queryArc(0, cycles).filter((h) => h.whole && h.hasOnset());
+        const events = haps.slice(0, MAX_EVENTS).map(describe);
+        const soundError = unknownSound(events);
+        return soundError ? { id, error: soundError } : { id, events };
+      } catch (error) {
+        return { id, error: String(error?.message ?? error) };
+      }
+    });
+  }
+
+  function setKnownSounds(names) {
+    knownSounds = names ? new Set(names) : null;
+  }
+
+  async function init() {
+    try {
+      repl = await S.initStrudel({
+        prebake: () => S.samples('github:tidalcycles/dirt-samples'),
+      });
+      setKnownSounds(Object.keys(S.soundMap.get()));
+      post({ type: 'ready', sounds: knownSounds.size });
+    } catch (error) {
+      post({ type: 'fatal', message: String(error?.message ?? error) });
+    }
+  }
+
+  async function play(code) {
+    try {
+      await S.getAudioContext().resume();
+      await repl.evaluate(code, true);
+      post({ type: 'playing' });
+    } catch (error) {
+      post({ type: 'playError', message: String(error?.message ?? error) });
+    }
+  }
+
+  function stop() {
+    repl?.stop();
+    post({ type: 'stopped' });
+  }
+
+  function now() {
+    return repl?.scheduler?.started ? repl.scheduler.now() : null;
+  }
+
+  // Swift reads the clock at display rate; this keeps a coarse push for idle checks.
+  const clock = setInterval(() => {
+    const cycle = now();
+    if (cycle != null) post({ type: 'time', cycle });
+  }, 250);
+  clock.unref?.();
+
+  globalThis.vamp = { init, analyze, play, stop, now, setKnownSounds };
+})();

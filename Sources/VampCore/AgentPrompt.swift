@@ -40,7 +40,7 @@ public enum AgentPrompt {
     Synths: s("sawtooth" | "square" | "triangle" | "sine" | "supersaw" | "pulse"). Noise: "white" "pink" "brown".
     Notes: note("c3 eb3 g3"), note("<c2 ab1>*8"). Scale degrees: n("0 2 4 7").scale("C4:minor"), \
     scale names like "D:dorian", "A3:minor pentatonic", "<C:minor F:minor>" to change per bar.
-    Chords: chord("<Cm9 Fm7 Bb7 Ebmaj7>").voicing(). Set the root register with .anchor("c4") if needed.
+    Chords: chord("<Cm9 Fm7 Bb7 Eb^7>").voicing(). Symbols: C Cm C7 Cm7 C^7 (major 7, never "maj7") Cm9 C^9 C9 C69 Csus C7sus Cadd9 Co7 Ch7 C7b9. Set the register with .anchor("c4") if needed.
     Envelope: .attack(0.01) .decay(0.2) .sustain(0.5) .release(0.3). Plucky = .decay(0.15).sustain(0).
     Filters: .lpf(800) .lpq(8) .hpf(200). Moving filter: .lpf(sine.range(400, 2000).slow(8)).
     Effects: .room(0.4) .size(0.8) .delay(0.3) .delaytime(0.1875) .delayfeedback(0.4) .pan(sine) \
