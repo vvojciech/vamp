@@ -6,6 +6,14 @@ struct LaneHeader: View {
     @Environment(AppModel.self) private var app
     let layer: Layer
     let error: String?
+    let eventsPerBar: Int?
+
+    /// The role, unless the name already says it; then how busy the layer is.
+    private var subtitle: String {
+        if layer.name.caseInsensitiveCompare(layer.role.label) != .orderedSame { return layer.role.label }
+        guard let eventsPerBar else { return layer.role.label }
+        return "\(eventsPerBar) \(layer.role == .drums || layer.role == .percussion ? "hits" : "notes") per bar"
+    }
 
     var body: some View {
         let tint = Theme.color(for: layer.role)
@@ -18,7 +26,7 @@ struct LaneHeader: View {
                     .background(RoundedRectangle(cornerRadius: 7).fill(tint.opacity(0.16)))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(layer.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.text).lineLimit(1)
-                    Text(layer.role.label).font(.system(size: 11)).foregroundStyle(Theme.muted)
+                    Text(subtitle).font(.system(size: 11)).foregroundStyle(Theme.muted).lineLimit(1)
                 }
                 Spacer(minLength: 4)
                 if let error {

@@ -54,7 +54,8 @@ struct TransportBar: View {
             .help("Copy the whole song as Strudel code, ready for strudel.cc")
         }
         .foregroundStyle(Theme.muted)
-        .padding(.horizontal, 18)
+        .padding(.leading, 84) // room for the window buttons in the hidden title bar
+        .padding(.trailing, 18)
         .frame(height: 60)
         .background(Theme.panel)
     }

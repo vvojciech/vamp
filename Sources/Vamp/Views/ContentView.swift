@@ -12,18 +12,22 @@ struct ContentView: View {
                 Divider().overlay(Theme.line)
                 VSplitView {
                     SheetView().frame(minHeight: 220)
-                    InspectorView().frame(minHeight: 170, idealHeight: 250)
+                    InspectorView().frame(minHeight: 150, idealHeight: 190, maxHeight: 480)
                 }
             }
             Divider().overlay(Theme.line)
             AgentPanel().frame(width: 360)
         }
+        .ignoresSafeArea(.container, edges: .top)
         .background(Theme.window)
         .background(EngineHost(webView: app.engine.webView).frame(width: 1, height: 1).opacity(0))
         .preferredColorScheme(.dark)
         .frame(minWidth: 1080, minHeight: 640)
         .onChange(of: app.engine.status) { _, status in
-            if status == .ready { app.engineDidBecomeReady() }
+            if status == .ready {
+                app.engineDidBecomeReady()
+                DevHooks.run(app)
+            }
         }
         .onAppear { keyMonitor = Self.installSpaceBar(app) }
         .onDisappear { if let keyMonitor { NSEvent.removeMonitor(keyMonitor) } }

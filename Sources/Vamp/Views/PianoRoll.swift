@@ -31,7 +31,7 @@ struct LaneLayout {
             let span = max(high - low, 1)
             let step = height / CGFloat(span)
             let midi = event.midi ?? low
-            return (height - CGFloat(midi - low) * step, min(max(step * 0.9, 3), 9))
+            return (height - CGFloat(midi - low) * step, min(max(step * 0.9, 4), 9))
         case let .drums(rows):
             let name = event.sound?.split(separator: ":").first.map(String.init) ?? ""
             let count = max(rows.count, 1)
@@ -88,8 +88,12 @@ struct PianoRoll: View {
 
             for label in layout.rowLabels {
                 let (y, _) = layout.row(for: NoteEvent(begin: 0, end: 0, midi: nil, sound: label, gain: 1), height: height)
-                let text = Text(label).font(.system(size: 8.5, weight: .medium, design: .monospaced)).foregroundStyle(Theme.faint)
-                context.draw(text, at: CGPoint(x: 4, y: inset + y), anchor: .leading)
+                let text = Text(label).font(.system(size: 8.5, weight: .semibold, design: .monospaced)).foregroundStyle(Theme.muted)
+                let resolved = context.resolve(text)
+                let textSize = resolved.measure(in: size)
+                let pill = CGRect(x: 3, y: inset + y - textSize.height / 2 - 1.5, width: textSize.width + 8, height: textSize.height + 3)
+                context.fill(Path(roundedRect: pill, cornerRadius: 3), with: .color(Theme.lane.opacity(0.92)))
+                context.draw(resolved, at: CGPoint(x: 7, y: inset + y), anchor: .leading)
             }
         }
     }

@@ -166,7 +166,8 @@ private struct Footer: View {
     private var meta: String {
         var parts = [entry.backend, String(format: "%.1f s", entry.seconds)]
         if let cost = entry.costUSD { parts.append(String(format: "$%.4f", cost)) }
-        else if entry.tokens > 0 { parts.append("\(entry.tokens / 1000)k tokens") }
+        else if entry.tokens > 0 { parts.append(String(format: "%.1fk tokens", Double(entry.tokens) / 1000)) }
+        if let attempts = entry.attempts, attempts > 1 { parts.append("fixed on try \(attempts)") }
         return parts.joined(separator: " · ")
     }
 }

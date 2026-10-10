@@ -15,6 +15,7 @@ struct ChatEntry: Identifiable, Codable, Equatable {
     var changes: [EditPlan.Change] = []
     var costUSD: Double?
     var tokens = 0
+    var attempts: Int?
     var seconds: Double = 0
     var songBefore: Song
 }
@@ -108,7 +109,16 @@ final class AppModel {
     // MARK: Playback
 
     func togglePlay() {
-        engine.isPlaying ? engine.stop() : playCurrent()
+        if engine.isPlaying { engine.stop(); return }
+        guard lastGood.isEmpty else { playCurrent(); return }
+        // Nothing checked yet (for example just after launch): check first, then play.
+        Task {
+            let result = await engine.analyze(song.layers, cycles: bars)
+            for case let (id, .success) in result.map({ ($0.key, $0.value) }) {
+                lastGood[id] = song.layers.first { $0.id == id }?.code
+            }
+            playCurrent()
+        }
     }
 
     private func playCurrent() {
@@ -169,8 +179,10 @@ final class AppModel {
                     entry.state = .done
                     entry.summary = result.summary
                     entry.changes = result.changes
-                    entry.costUSD = result.costUSD
+                    // CLI backends report list-price figures, but the plan pays, so only the API shows dollars.
+                    entry.costUSD = kind == .anthropicAPI ? result.costUSD : nil
                     entry.tokens = result.inputTokens + result.outputTokens
+                    entry.attempts = result.attempts
                 }
                 if case let .added(id)? = result.changes.first(where: { if case .added = $0 { true } else { false } }) {
                     selectedLayerID = id

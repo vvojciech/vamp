@@ -7,22 +7,28 @@ struct SheetView: View {
     static let headerWidth: CGFloat = 214
 
     var body: some View {
-        TimelineView(.animation(paused: !app.engine.isPlaying)) { timeline in
-            let position = app.engine.position(at: timeline.date, bpm: app.song.bpm)
+        ScrollViewReader { proxy in
             ScrollView(.vertical) {
-                VStack(spacing: 6) {
-                    Ruler(bars: app.bars, position: position)
-                    ForEach(app.song.layers) { layer in
-                        LaneView(layer: layer, position: position)
+                TimelineView(.animation(paused: !app.engine.isPlaying)) { timeline in
+                    let position = app.engine.position(at: timeline.date, bpm: app.song.bpm)
+                    VStack(spacing: 6) {
+                        Ruler(bars: app.bars, position: position)
+                        ForEach(app.song.layers) { layer in
+                            LaneView(layer: layer, position: position).id(layer.id)
+                        }
+                        if app.song.layers.isEmpty { EmptySheet() }
+                        AddLayerMenu()
+                            .padding(.leading, Self.headerWidth + 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 4)
                     }
-                    if app.song.layers.isEmpty { EmptySheet() }
-                    AddLayerMenu()
-                        .padding(.leading, Self.headerWidth + 12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 4)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 14)
                 }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 14)
+            }
+            .onChange(of: app.selectedLayerID) { _, id in
+                // Bring a new or newly selected layer into view, for example one the agent just added.
+                if let id { withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(id) } }
             }
         }
         .background(Theme.window)
@@ -67,7 +73,9 @@ private struct LaneView: View {
         let tint = Theme.color(for: layer.role)
         let result = app.analysis[layer.id]
         HStack(spacing: 12) {
-            LaneHeader(layer: layer, error: result.flatMap { if case let .failure(e) = $0 { e.message } else { nil } })
+            LaneHeader(layer: layer,
+                       error: result.flatMap { if case let .failure(e) = $0 { e.message } else { nil } },
+                       eventsPerBar: result.flatMap { if case let .success(events) = $0 { events.count / max(app.bars, 1) } else { nil } })
                 .frame(width: SheetView.headerWidth)
             ZStack {
                 if case let .success(events) = result {
