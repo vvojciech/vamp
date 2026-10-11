@@ -34,7 +34,7 @@ private actor Log {
         let result = try await Polisher.run(
             song: .starter, goal: 9, maxRounds: 4,
             revise: { request, song in await log.add(request); return song },
-            assess: { _ in card(scores[await counter.next()]) },
+            assess: { _ in Polisher.Assessment(card: card(scores[await counter.next()]), verdict: "v") },
             progress: { round in await log.round(round.number) })
         #expect(result.rounds.count == 2)
         #expect(result.rounds.last?.card.overall == 9.2)
@@ -48,11 +48,38 @@ private actor Log {
         let result = try await Polisher.run(
             song: .starter, goal: 9, maxRounds: 3,
             revise: { _, song in var s = song; s.title += "!"; return s },
-            assess: { _ in card(scores[await counter.next()]) },
+            assess: { _ in Polisher.Assessment(card: card(scores[await counter.next()]), verdict: "v") },
             progress: { _ in })
         #expect(result.rounds.count == 4)
         #expect(result.best.card.overall == 8.0)
         #expect(result.best.song.title == "Night Drive!")
+    }
+}
+
+@Suite struct PolishFromBestTests {
+    @Test func aWorseRoundIsDiscardedAndTheNextRevisionStartsFromTheBest() async throws {
+        let counter = Counter()
+        let seen = Log()
+        let scores = [6.0, 8.0, 7.0, 9.1]
+        let result = try await Polisher.run(
+            song: .starter, goal: 9, maxRounds: 3,
+            revise: { request, song in
+                await seen.add(song.title)
+                var next = song
+                next.title = "v\(await counter.value + 1)"
+                return next
+            },
+            assess: { _ in Polisher.Assessment(card: card(scores[await counter.next()]), verdict: "v") },
+            progress: { _ in })
+        // Round 2 (v1) scored 8; round 3 (v2) scored 7, so round 4 revises v1 again.
+        #expect(await seen.requests == ["Night Drive", "v1", "v1"])
+        #expect(result.best.card.overall == 9.1)
+    }
+
+    @Test func revisionRequestProtectsStrongAspectsAndCarriesTheVerdict() {
+        let text = Critique.revisionRequest(card: card(7), goal: 9, verdict: "Close, but the hook is weak.")
+        #expect(text.contains("Close, but the hook is weak."))
+        #expect(text.contains("Do not make these worse: Form"))
     }
 }
 

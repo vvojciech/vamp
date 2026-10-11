@@ -33,7 +33,7 @@ extension AppModel {
                     let reached = best.card.overall >= goal
                     entry.summary = (reached ? "Every aspect is \(Int(goal)) or more" : "Best result")
                         + " after round \(best.number): lowest is \(weakest?.name.label ?? "") at \(String(format: "%.1f", best.card.overall)). "
-                        + entry.summary
+                        + best.verdict
                 }
             } catch is CancellationError {
                 updateLastEntry { $0.state = .failed("Stopped. The song keeps the last revision.") }
@@ -65,7 +65,7 @@ extension AppModel {
         return result.song
     }
 
-    private func assess(_ current: Song, kind: BackendKind) async throws -> Scorecard {
+    private func assess(_ current: Song, kind: BackendKind) async throws -> Polisher.Assessment {
         let bars = current.totalBars ?? self.bars
         let events = await analyze(current, cycles: bars).compactMapValues { try? $0.get() }
         let measured = SongCritic.measure(song: current, events: events, bars: bars)
@@ -75,11 +75,10 @@ extension AppModel {
             schema: Critique.jsonSchema, effort: "medium", timeout: 600))
         let judged = try Critique.decode(reply.json)
         updateLastEntry { entry in
-            entry.summary = judged.verdict
             entry.tokens += reply.inputTokens + reply.outputTokens
             if let cost = reply.costUSD, kind == .anthropicAPI { entry.costUSD = (entry.costUSD ?? 0) + cost }
         }
-        return measured.combined(with: judged.card)
+        return Polisher.Assessment(card: measured.combined(with: judged.card), verdict: judged.verdict)
     }
 
     private func record(_ round: Polisher.Round) {

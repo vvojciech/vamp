@@ -48,11 +48,17 @@ public enum Critique {
     """
 
     /// The request the editing agent gets for a revision round.
-    public static func revisionRequest(card: Scorecard, goal: Double) -> String {
-        """
+    public static func revisionRequest(card: Scorecard, goal: Double, verdict: String) -> String {
+        let strong = card.aspects.filter { $0.score >= goal }.map(\.name.label)
+        let protect = strong.isEmpty ? "" : "\nDo not make these worse: \(strong.joined(separator: ", ")). Leave the layers that carry them alone unless a fix needs them.\n"
+        return """
         Improve this song until every aspect scores \(String(format: "%.0f", goal)) or more. Fix the weakest \
-        aspects first and keep what already works. You may add, rewrite or remove layers and sections, \
-        and use section variations. Make every change the critique asks for that fits the song.
+        aspects first. You may add, rewrite or remove layers and sections, and use section variations. \
+        Make every change the critique asks for that fits the song, and check that each change does not \
+        create a new problem (for example, a new layer raises the total gain).
+        \(protect)
+        VERDICT
+        \(verdict)
 
         CRITIQUE
         \(card.report)
@@ -61,11 +67,22 @@ public enum Critique {
 }
 
 /// Runs measure, judge and revise rounds until the song reaches the goal or the rounds run out.
+/// Each revision starts from the best song so far, so a worse revision is discarded, not built on.
 public enum Polisher {
+    public struct Assessment: Sendable {
+        public var card: Scorecard
+        public var verdict: String
+        public init(card: Scorecard, verdict: String) {
+            self.card = card
+            self.verdict = verdict
+        }
+    }
+
     public struct Round: Sendable {
         public var number: Int
         public var song: Song
         public var card: Scorecard
+        public var verdict: String
     }
 
     public struct Result: Sendable {
@@ -77,18 +94,20 @@ public enum Polisher {
     public static func run(
         song: Song, goal: Double, maxRounds: Int,
         revise: @Sendable (String, Song) async throws -> Song,
-        assess: @Sendable (Song) async throws -> Scorecard,
+        assess: @Sendable (Song) async throws -> Assessment,
         progress: @Sendable (Round) async -> Void
     ) async throws -> Result {
         var current = song
         var rounds: [Round] = []
         for number in 1...(maxRounds + 1) {
             try Task.checkCancellation()
-            let round = Round(number: number, song: current, card: try await assess(current))
+            let assessment = try await assess(current)
+            let round = Round(number: number, song: current, card: assessment.card, verdict: assessment.verdict)
             rounds.append(round)
             await progress(round)
             if round.card.overall >= goal || number > maxRounds { break }
-            current = try await revise(Critique.revisionRequest(card: round.card, goal: goal), current)
+            let best = Result(rounds: rounds).best
+            current = try await revise(Critique.revisionRequest(card: best.card, goal: goal, verdict: best.verdict), best.song)
         }
         return Result(rounds: rounds)
     }
