@@ -18,14 +18,6 @@ struct ChatEntry: Identifiable, Codable, Equatable {
     var attempts: Int?
     var seconds: Double = 0
     var songBefore: Song
-    /// Set for a polish run: the overall score after each round.
-    var rounds: [RoundNote]?
-}
-
-struct RoundNote: Codable, Equatable {
-    var number: Int
-    var overall: Double
-    var weakest: String
 }
 
 /// The app's state. An ObservableObject on purpose, not @Observable: Observation keeps
@@ -45,10 +37,6 @@ final class AppModel: ObservableObject {
     /// View length when the song has no sections.
     @Published var bars = 4 { didSet { scheduleAnalysis() } }
     @Published private(set) var analysis: [String: Result<[NoteEvent], LayerError>] = [:]
-    /// Live measured scores, or the judged card from the latest polish round.
-    @Published var scorecard: Scorecard?
-    /// True while `scorecard` includes the judge's view, until the song changes again.
-    @Published var scorecardJudged = false
     @Published var chat: [ChatEntry] = []
     @Published private(set) var undoStack: [Song] = []
     @Published private(set) var redoStack: [Song] = []
@@ -210,7 +198,6 @@ final class AppModel: ObservableObject {
         // Take a snapshot now; the task never reads the observable model after a suspension.
         let snapshot = song
         let range = window
-        let measureScore = !loopsSection && !isPolishing
         analysisTask = Task { [engine] in
             if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
             guard !Task.isCancelled, engine.status == .ready else { return }
@@ -218,10 +205,6 @@ final class AppModel: ObservableObject {
             guard !Task.isCancelled else { return }
             analysis = result
             record(result, of: snapshot)
-            if measureScore {
-                scorecard = SongCritic.measure(song: snapshot, events: result.compactMapValues { try? $0.get() }, bars: range.count)
-                scorecardJudged = false
-            }
             if engine.isPlaying { playCurrent() }
         }
     }
@@ -236,7 +219,7 @@ final class AppModel: ObservableObject {
         saveTask = Task {
             try? await Task.sleep(for: .seconds(0.8))
             guard !Task.isCancelled else { return }
-            Persistence.save(.init(song: song, chat: Array(chat.suffix(100)), scorecard: scorecard, scorecardJudged: scorecardJudged))
+            Persistence.save(.init(song: song, chat: Array(chat.suffix(100))))
         }
     }
 }

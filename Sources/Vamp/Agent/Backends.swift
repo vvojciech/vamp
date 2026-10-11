@@ -31,6 +31,15 @@ enum BackendKind: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// The model that writes whole songs. Quality matters more than speed here.
+    var composerModel: String {
+        switch self {
+        case .claudeCLI: "opus"
+        case .codexCLI: ""
+        case .anthropicAPI: APIModel.opus.rawValue
+        }
+    }
+
     /// A short name for the log and the picker, such as "Claude Haiku" or "Codex".
     func displayName(model: String) -> String {
         let label = models.first { $0.id == model }?.label ?? model

@@ -11,8 +11,6 @@ Vamp is a macOS app that makes music from prompts. You describe a change in plai
 - **Code.** Select a layer to see its [Strudel](https://strudel.cc) code. Edits play as soon as the code runs. If the code breaks, the last working version keeps playing, and the error shows under the editor.
 - **Sections.** A song can have sections, such as Intro, Verse, Chorus, Breakdown and Outro. Each section has a length in bars and its own set of layers. A layer can also have different code in one section. The strip above the lanes shows the arrangement. Click a section to edit it, or turn on Loop to play and show only that section.
 - **Agent.** Type a request such as "add a shuffling hi-hat groove". The agent returns only the edits it needs: add, change or remove a layer or section, or set the tempo. Vamp checks the new code before it plays. If the code fails, Vamp sends the errors back once for a fix. A request for a whole song ("compose…") uses the composer model with more thinking time.
-- **Score card.** Vamp measures the song from its notes and scores seven aspects from 0 to 10: form, energy arc, harmony, groove, melody, sound design and mix. Click an aspect to see what to change.
-- **Polish to 9+.** One click starts a loop: a second model reviews the song with the measurements as evidence, the composer revises it, and the loop repeats until every aspect scores 9 or more, or for at most 4 rounds. The song keeps the best round. Each aspect counts the lower of the measured and the reviewed score.
 - **Sounds.** Vamp loads the sample packs strudel.cc uses: 71 classic drum machines (TR-808, TR-909, LinnDrum and more), a Steinway piano, 128 orchestral and world instruments, and the Dirt samples, plus Strudel's synths.
 - **Undo.** Every agent change has its own Undo button. ⌘Z and ⇧⌘Z move through all versions of the song.
 - **Export.** "Copy code" copies the whole song as one Strudel program that runs on strudel.cc.
@@ -27,7 +25,7 @@ Choose the backend from the menu in the prompt box or in Settings (⌘,).
 | ChatGPT subscription | The `codex` CLI, signed in | Included in your ChatGPT plan |
 | Anthropic API key | A key, stored in the login keychain | Pay per request. The log shows the cost of each prompt. |
 
-Quick edits use the model you choose. The default is Claude Haiku, the cheapest choice. Whole songs and polishing use Claude Opus. In each polish round, three Opus reviews run in parallel and Vamp averages their scores, because a single review varies by up to a point per aspect. A revision builds on the latest version unless it scored clearly worse (more than half a point) than the best one. With Codex, both use your Codex default model. Each request sends only the current song as JSON, a short summary of the last four prompts and the new request. A typical prompt uses about 5k tokens with the Claude CLI. The Codex CLI adds its own agent prompt, so it uses about 25k tokens.
+Quick edits use the model you choose. The default is Claude Haiku, the cheapest choice. A request for a whole song ("compose…") uses Claude Opus with more thinking time. With Codex, it uses your Codex default model. Each request sends only the current song as JSON, a short summary of the last four prompts and the new request. A typical prompt uses about 5k tokens with the Claude CLI. The Codex CLI adds its own agent prompt, so it uses about 25k tokens.
 
 Vamp looks for the CLIs in `/opt/homebrew/bin`, `/usr/local/bin`, `~/.local/bin` and some other common install folders.
 
@@ -66,7 +64,7 @@ VAMP_PLAY=1 VAMP_PROMPT="make it darker" VAMP_SNAPSHOT=/tmp/vamp.png VAMP_SNAPSH
   build/Vamp.app/Contents/MacOS/Vamp
 ```
 
-`VAMP_SESSION=/tmp/test.json` keeps a test run away from your saved session. `VAMP_POLISH=1` runs the polish loop after the prompt, and `VAMP_ROUNDS` sets its round limit. `VAMP_SELECT` selects a layer by id. The full list is in `Sources/Vamp/DevHooks.swift`.
+`VAMP_SESSION=/tmp/test.json` keeps a test run away from your saved session. `VAMP_QUIT=1` quits once the agent has finished and the session is saved. `VAMP_SELECT` selects a layer by id. The full list is in `Sources/Vamp/DevHooks.swift`.
 
 ## Licence
 

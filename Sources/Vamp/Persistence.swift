@@ -6,9 +6,6 @@ enum Persistence {
     struct Snapshot: Codable {
         var song: Song
         var chat: [ChatEntry]
-        /// The latest scores with their notes. Optional, so older session files still load.
-        var scorecard: Scorecard?
-        var scorecardJudged: Bool?
     }
 
     private static var url: URL {
