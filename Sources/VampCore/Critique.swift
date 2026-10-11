@@ -60,7 +60,10 @@ public enum Critique {
         Improve this song until every aspect scores \(String(format: "%.0f", goal)) or more. Fix the weakest \
         aspects first. You may add, rewrite or remove layers and sections, and use section variations. \
         Make every change the critique asks for that fits the song, and check that each change does not \
-        create a new problem (for example, a new layer raises the total gain).
+        create a new problem (for example, a new layer raises the total gain). Improve existing layers \
+        and section variations before you add layers. Add a layer only when no existing one can do the \
+        job, and then lower or remove another one in that section. Give reverb and delay to at most \
+        three layers.
         \(protect)
         VERDICT
         \(verdict)
