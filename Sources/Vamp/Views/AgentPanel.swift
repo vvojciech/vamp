@@ -22,6 +22,8 @@ struct AgentPanel: View {
             .padding(.horizontal, 16)
             .frame(height: 44)
             Divider().overlay(Theme.line)
+            ScorecardView()
+            Divider().overlay(Theme.line)
 
             ScrollViewReader { proxy in
                 ScrollView {
@@ -46,12 +48,13 @@ struct AgentPanel: View {
 
 private struct Suggestions: View {
     @Environment(AppModel.self) private var app
-    private let ideas = ["Make it darker and slower", "Add a shuffling hi-hat groove", "Turn the bass into a rolling 16th line",
-                         "Add a dreamy pad under everything", "Strip it back to drums and bass", "Make the arp jump octaves"]
+    private let ideas = ["Compose a full song from this loop: intro, verses, choruses, a breakdown and an outro",
+                         "Compose a warm lo-fi song with Rhodes-like piano, vinyl drums and a sax hook",
+                         "Add a shuffling hi-hat groove", "Make it darker and slower", "Add a dreamy pad under everything"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Describe a change in plain words. The agent edits only the layers it needs to, and you can undo any change.")
+            Text("Describe a change in plain words, or ask for a whole song. Then use Polish to 9+ to review and refine it. You can undo any change.")
                 .font(.callout).foregroundStyle(Theme.muted).fixedSize(horizontal: false, vertical: true)
             ForEach(ideas, id: \.self) { idea in
                 Button { app.send(idea) } label: {
@@ -78,13 +81,18 @@ private struct EntryView: View {
                 .background(RoundedRectangle(cornerRadius: 10).fill(Theme.raised))
             switch entry.state {
             case .working:
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text("Composing with \(entry.backend)…").font(.callout).foregroundStyle(Theme.muted)
+                VStack(alignment: .leading, spacing: 8) {
+                    if let rounds = entry.rounds, !rounds.isEmpty { RoundTrail(rounds: rounds) }
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text(entry.rounds.map { "Round \($0.count + 1) with \(entry.backend)…" } ?? "Composing with \(entry.backend)…")
+                            .font(.callout).foregroundStyle(Theme.muted)
+                    }
                 }
                 .padding(.leading, 4)
             case .done:
                 VStack(alignment: .leading, spacing: 8) {
+                    if let rounds = entry.rounds, !rounds.isEmpty { RoundTrail(rounds: rounds) }
                     Text(entry.summary).font(.callout).foregroundStyle(Theme.text.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
                     ChangeChips(changes: entry.changes, songs: [app.song, entry.songBefore])
@@ -96,10 +104,31 @@ private struct EntryView: View {
                     Label(message, systemImage: "exclamationmark.triangle.fill")
                         .font(.callout).foregroundStyle(Theme.danger).textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
-                    Button("Try again") { app.send(entry.request) }
+                    Button("Try again") { entry.rounds == nil ? app.send(entry.request) : app.polish() }
                         .buttonStyle(.borderless).font(.callout).disabled(app.isAgentWorking)
                 }
                 .padding(.leading, 4)
+            }
+        }
+    }
+}
+
+/// The overall score after each polish round, so the musician sees the song improve.
+private struct RoundTrail: View {
+    let rounds: [RoundNote]
+
+    var body: some View {
+        Flow(spacing: 6) {
+            ForEach(rounds, id: \.number) { round in
+                HStack(spacing: 5) {
+                    Text("\(round.number)").foregroundStyle(Theme.faint)
+                    Text(String(format: "%.1f", round.overall)).foregroundStyle(ScorecardView.color(round.overall))
+                    Text(round.weakest).foregroundStyle(Theme.muted)
+                }
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .background(Capsule().fill(Theme.raised))
+                .help("Round \(round.number): lowest aspect \(round.weakest)")
             }
         }
     }

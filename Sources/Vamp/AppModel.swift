@@ -18,6 +18,14 @@ struct ChatEntry: Identifiable, Codable, Equatable {
     var attempts: Int?
     var seconds: Double = 0
     var songBefore: Song
+    /// Set for a polish run: the overall score after each round.
+    var rounds: [RoundNote]?
+}
+
+struct RoundNote: Codable, Equatable {
+    var number: Int
+    var overall: Double
+    var weakest: String
 }
 
 @MainActor @Observable
@@ -34,6 +42,10 @@ final class AppModel {
     /// View length when the song has no sections.
     var bars = 4 { didSet { scheduleAnalysis() } }
     private(set) var analysis: [String: Result<[NoteEvent], LayerError>] = [:]
+    /// Live measured scores, or the judged card from the latest polish round.
+    var scorecard: Scorecard?
+    /// True while `scorecard` includes the judge's view, until the song changes again.
+    var scorecardJudged = false
     var chat: [ChatEntry] = []
     private(set) var undoStack: [Song] = []
     private(set) var redoStack: [Song] = []
@@ -191,6 +203,10 @@ final class AppModel {
             guard !Task.isCancelled else { return }
             analysis = result
             record(result)
+            if !loopsSection && !isPolishing {
+                scorecard = SongCritic.measure(song: song, events: result.compactMapValues { try? $0.get() }, bars: window.count)
+                scorecardJudged = false
+            }
             if engine.isPlaying { playCurrent() }
         }
     }

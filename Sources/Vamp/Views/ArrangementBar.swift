@@ -10,7 +10,7 @@ struct ArrangementBar: View {
     var body: some View {
         HStack(spacing: 12) {
             HStack(spacing: 8) {
-                Text("Arrangement").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted)
+                Text("Sections").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.muted).lineLimit(1)
                 Spacer()
                 if !app.song.sections.isEmpty {
                     Button { app.loopsSection.toggle() } label: {

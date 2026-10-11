@@ -7,6 +7,7 @@ import SwiftUI
 ///   VAMP_SNAPSHOT=/a.png   render the window to a PNG (after VAMP_SNAPSHOT_DELAY seconds, default 4)
 ///   VAMP_SELECT=layer-id   select this layer before the snapshot
 ///   VAMP_SESSION=/s.json   load and save the session here instead of Application Support
+///   VAMP_POLISH=1          run the polish loop after the prompt (VAMP_ROUNDS sets the round limit)
 @MainActor
 enum DevHooks {
     static func run(_ app: AppModel) {
@@ -14,6 +15,12 @@ enum DevHooks {
         if let id = env["VAMP_SELECT"] { app.selectedLayerID = id }
         if env["VAMP_PLAY"] == "1" { app.togglePlay() }
         if let prompt = env["VAMP_PROMPT"] { app.send(prompt) }
+        if env["VAMP_POLISH"] == "1" {
+            Task {
+                while app.isAgentWorking { try? await Task.sleep(for: .seconds(1)) }
+                app.polish(maxRounds: Int(env["VAMP_ROUNDS"] ?? "") ?? 4)
+            }
+        }
         guard let path = env["VAMP_SNAPSHOT"] else { return }
         let delay = Double(env["VAMP_SNAPSHOT_DELAY"] ?? "") ?? 4
         Task {
