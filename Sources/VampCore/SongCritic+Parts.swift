@@ -102,6 +102,16 @@ extension SongCritic {
 
     // MARK: Mix
 
+    /// The section that starts at this bar, so notes name sections instead of bar numbers.
+    static func sectionName(_ song: Song, startingAt bar: Int) -> String? {
+        var start = 0
+        for section in song.sections {
+            if start == bar { return section.name }
+            start += section.bars
+        }
+        return nil
+    }
+
     public static func mix(_ song: Song, events: [String: [NoteEvent]], sections: [(Range<Int>, [String])]) -> Measured {
         var m = Measured()
         for layer in song.layers where layer.gain > 1.2 {
@@ -114,7 +124,7 @@ extension SongCritic {
                 let average = hits.isEmpty ? 1 : hits.map(\.gain).reduce(0, +) / Double(hits.count)
                 return layer.gain * min(average, 1.5)
             }.reduce(0, +)
-            return load > 4 ? "bars \(range.lowerBound + 1)-\(range.upperBound) (\(String(format: "%.1f", load)))" : nil
+            return load > 4 ? "\(sectionName(song, startingAt: range.lowerBound) ?? "bars \(range.lowerBound + 1)-\(range.upperBound)") (\(String(format: "%.1f", load)))" : nil
         }
         if !overloaded.isEmpty {
             m.penalise(1, "Too much total gain may clip in \(overloaded.joined(separator: ", ")). Keep the sum under 4: lower pads, chords and fx first.")
