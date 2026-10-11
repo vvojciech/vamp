@@ -87,6 +87,7 @@ extension AppModel {
         scorecardJudged = true
         let weakest = round.card.aspects.min { $0.score < $1.score }?.name.label ?? ""
         updateLastEntry { $0.rounds?.append(RoundNote(number: round.number, overall: round.card.overall, weakest: weakest)) }
+        scheduleSave()
     }
 }
 

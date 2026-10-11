@@ -221,7 +221,7 @@ final class AppModel {
         saveTask = Task {
             try? await Task.sleep(for: .seconds(0.8))
             guard !Task.isCancelled else { return }
-            Persistence.save(.init(song: song, chat: Array(chat.suffix(100))))
+            Persistence.save(.init(song: song, chat: Array(chat.suffix(100)), scorecard: scorecard, scorecardJudged: scorecardJudged))
         }
     }
 }
