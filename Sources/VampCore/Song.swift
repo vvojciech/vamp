@@ -71,8 +71,9 @@ public struct Song: Codable, Equatable, Sendable {
     ///   - codeOverrides: a program to use in place of a layer's own, for example its last valid version.
     ///   - tailBars: bars of silence after the whole song, so reverb and delay ring out before it
     ///     starts over. Ignored for a loop or a looped section.
+    ///   - startBar: play from this bar of the arrangement. Ignored for a loop or a looped section.
     ///   - onlySection: play just this section as a loop.
-    public func composedCode(codeOverrides: [String: String] = [:], tailBars: Int = 0, onlySection: String? = nil) -> String? {
+    public func composedCode(codeOverrides: [String: String] = [:], tailBars: Int = 0, startBar: Int = 0, onlySection: String? = nil) -> String? {
         let looped = onlySection.flatMap(section)
         let parts = audibleLayers.compactMap { layer -> String? in
             let code: String?
@@ -85,11 +86,13 @@ public struct Song: Codable, Equatable, Sendable {
         }
         guard !parts.isEmpty else { return nil }
         let tempo = "setcps(\(Int(bpm.rounded()))/60/4)"
-        let stack = "stack(\n\(parts.joined(separator: ",\n"))\n)"
-        if tailBars > 0, looped == nil, let total = totalBars {
-            return "\(tempo)\narrange(\n[\(total), \(stack)],\n[\(tailBars), silence]\n)"
+        var body = "stack(\n\(parts.joined(separator: ",\n"))\n)"
+        if looped == nil, let total = totalBars {
+            if tailBars > 0 { body = "arrange(\n[\(total), \(body)],\n[\(tailBars), silence]\n)" }
+            // Strudel starts every play at cycle 0, so shift the song to start at `startBar`.
+            if startBar > 0 { body = "(\n\(body)\n).early(\(startBar))" }
         }
-        return "\(tempo)\n\(stack)"
+        return "\(tempo)\n\(body)"
     }
 
     public func index(of id: String) -> Int? { layers.firstIndex { $0.id == id } }

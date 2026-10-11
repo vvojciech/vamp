@@ -28,9 +28,36 @@ public extension Song {
     var durationSeconds: Double? { totalBars.map { Double($0) * 240 / bpm } }
 
     /// The cycle where playback stops, or nil when it should loop.
-    func playbackEnd(tailBars: Int, loopingSection: String?) -> Double? {
+    /// Playback that starts at `startBar` has that many fewer bars to play.
+    func playbackEnd(tailBars: Int, loopingSection: String?, startBar: Int = 0) -> Double? {
         guard loopingSection == nil, let total = totalBars else { return nil }
-        return Double(total + tailBars)
+        return Double(total + tailBars - startBar)
+    }
+
+    /// First bar of each section, in order.
+    var sectionStarts: [Int] {
+        var bar = 0
+        return sections.map { section in defer { bar += section.bars }; return bar }
+    }
+
+    func startBar(ofSection id: String) -> Int? {
+        sections.firstIndex { $0.id == id }.map { sectionStarts[$0] }
+    }
+
+    func section(atBar bar: Double) -> Section? {
+        zip(sections, sectionStarts).first { section, start in
+            Double(start) <= bar && bar < Double(start + section.bars)
+        }?.0
+    }
+
+    func nextSectionStart(after bar: Double) -> Int? {
+        sectionStarts.first { Double($0) > bar }
+    }
+
+    /// Back to the start of the current section, or to the one before when already within
+    /// its first bar, like the previous-track button on a player.
+    func previousSectionStart(before bar: Double) -> Int {
+        sectionStarts.last { Double($0) < bar - 1 } ?? 0
     }
 
     /// "3:12".

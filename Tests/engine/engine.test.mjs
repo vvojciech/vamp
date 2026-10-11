@@ -85,6 +85,12 @@ test('a song wrapped with a silent tail plays nothing in the tail', () => {
   assert.deepEqual(result.events.map((e) => e.begin), [0, 1, 2, 3]);
 });
 
+test('early(n) on an arranged song starts playback at bar n', () => {
+  const code = '(\narrange(\n[2, note("c3")],\n[2, note("e3")]\n)\n).early(2)';
+  const [result] = analyze([{ id: 'song', code }], 2);
+  assert.deepEqual(result.events.map((e) => [e.begin, e.midi]), [[0, 52], [1, 52]]);
+});
+
 test('the starter song analyses without errors', () => {
   const results = analyze(starter.layers, 4);
   for (const r of results) assert.equal(r.error, undefined, `${r.id}: ${r.error}`);
