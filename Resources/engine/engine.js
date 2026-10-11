@@ -109,6 +109,7 @@
       });
       setKnownSounds(Object.keys(S.soundMap.get()));
       post({ type: 'ready', sounds: knownSounds.size });
+      post({ type: 'log', message: `ready with ${knownSounds.size} sounds` });
     } catch (error) {
       post({ type: 'fatal', message: String(error?.message ?? error) });
     }

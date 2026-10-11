@@ -122,7 +122,8 @@ struct PianoRoll: View {
                 let text = Text(label).font(.system(size: 8.5, weight: .semibold, design: .monospaced)).foregroundStyle(Theme.muted)
                 let resolved = context.resolve(text)
                 let textSize = resolved.measure(in: size)
-                let pill = CGRect(x: 3, y: inset + y - textSize.height / 2 - 1.5, width: textSize.width + 8, height: textSize.height + 3)
+                // Starts at the lane edge, so no sliver of a first-beat note shows to its left.
+                let pill = CGRect(x: 0, y: inset + y - textSize.height / 2 - 1.5, width: textSize.width + 11, height: textSize.height + 3)
                 context.fill(Path(roundedRect: pill, cornerRadius: 3), with: .color(Theme.lane))
                 context.draw(resolved, at: CGPoint(x: 7, y: inset + y), anchor: .leading)
             }
