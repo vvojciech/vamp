@@ -107,6 +107,7 @@ private struct EntryView: View {
 }
 
 private struct ChangeChips: View {
+    static let visible = 8
     let changes: [EditPlan.Change]
     /// The song now, then the song before the prompt, for layers that no longer exist.
     let songs: [Song]
@@ -114,13 +115,22 @@ private struct ChangeChips: View {
     var body: some View {
         if !changes.isEmpty {
             Flow(spacing: 6) {
-                ForEach(Array(changes.enumerated()), id: \.offset) { _, change in
+                // A whole song makes dozens of changes; show the first few and count the rest.
+                ForEach(Array(changes.prefix(Self.visible).enumerated()), id: \.offset) { _, change in
                     let (symbol, text, tint) = describe(change)
                     Label(text, systemImage: symbol)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(tint)
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(Capsule().fill(tint.opacity(0.13)))
+                }
+                if changes.count > Self.visible {
+                    Text("+\(changes.count - Self.visible) more")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Theme.muted)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Capsule().fill(Theme.raised))
+                        .help(changes.dropFirst(Self.visible).map { describe($0).1 }.joined(separator: ", "))
                 }
             }
         }
