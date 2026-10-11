@@ -116,6 +116,14 @@ private func layer(_ id: String, _ role: LayerRole, code: String = "x", gain: Do
         #expect(card.notes.contains { $0.contains("sits high") })
     }
 
+    @Test func quietHatsAreFineButAQuietKickIsNot() {
+        let song = Song(title: "M", bpm: 100, layers: [layer("hats", .drums, gain: 0.4), layer("kick", .drums, gain: 0.4)])
+        let events = ["hats": [NoteEvent(begin: 0, end: 0.1, sound: "hh")], "kick": [NoteEvent(begin: 0, end: 0.1, sound: "bd")]]
+        let notes = SongCritic.mix(song, events: events, sections: [(0..<4, ["hats", "kick"])]).notes
+        #expect(notes.count == 1)
+        #expect(notes.first?.hasPrefix("kick is quiet") == true)
+    }
+
     @Test func scorecardOverallIsTheLowestAspect() {
         let card = Scorecard(aspects: [.init(name: .form, score: 9.5, notes: []), .init(name: .mix, score: 7, notes: [])])
         #expect(card.overall == 7)

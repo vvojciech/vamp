@@ -137,7 +137,11 @@ extension SongCritic {
         let lead = median(.lead) ?? median(.arp)
         let pad = median(.pad) ?? median(.chords)
         if let lead, let pad, abs(lead - pad) < 4 { m.penalise(1, "The melody and the chords share one register and mask each other. Move the melody up an octave.") }
-        for layer in song.layers where [.drums, .bass].contains(layer.role) && layer.gain < 0.5 {
+        // Only the kick and the bass carry the groove; quiet hats and percussion are normal.
+        func hasKick(_ layer: Layer) -> Bool {
+            (events[layer.id] ?? []).contains { ($0.sound ?? "").hasPrefix("bd") || ($0.sound ?? "").contains("kick") }
+        }
+        for layer in song.layers where (layer.role == .bass || (layer.role == .drums && hasKick(layer))) && layer.gain < 0.5 {
             m.penalise(1, "\(layer.name) is quiet (\(Int(layer.gain * 100))%). Drums and bass carry the groove.")
         }
         let wet = song.layers.filter { $0.code.firstMatch(of: #/\.room\(\s*0?\.[6-9]/#) != nil || $0.code.contains(".room(1") }
