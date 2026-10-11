@@ -57,6 +57,20 @@ private let base = Song(title: "Groove", bpm: 110, layers: [
         #expect(throws: EditError.self) { try EditPlan.Edit(op: .addLayer, name: "X").apply(to: &song) }
     }
 
+    @Test func thePlanComesFirstSoTheEditsFollowFromIt() throws {
+        let schema = EditPlan.jsonSchema
+        let plan = try #require(schema.range(of: "\"plan\""))
+        let edits = try #require(schema.range(of: "\"edits\":{"))
+        #expect(plan.lowerBound < edits.lowerBound)
+        let object = try JSONSerialization.jsonObject(with: Data(schema.utf8)) as? [String: Any]
+        #expect((object?["required"] as? [String])?.contains("plan") == true)
+    }
+
+    @Test func aPlanDecodesWithTheEdits() throws {
+        let json = #"{"plan":"C minor, 100 BPM, 8 sections.","summary":"s","edits":[]}"#
+        #expect(try JSONDecoder().decode(EditPlan.self, from: Data(json.utf8)).plan == "C minor, 100 BPM, 8 sections.")
+    }
+
     @Test func schemaIsValidJSONWithStrictShape() throws {
         let object = try JSONSerialization.jsonObject(with: Data(EditPlan.jsonSchema.utf8)) as? [String: Any]
         #expect(object?["additionalProperties"] as? Bool == false)

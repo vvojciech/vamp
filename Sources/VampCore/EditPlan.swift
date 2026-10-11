@@ -3,6 +3,8 @@ import Foundation
 /// The agent's answer: a short summary plus the smallest set of edits to the song.
 /// Every backend (Claude CLI, Codex CLI, Anthropic API) returns this same shape.
 public struct EditPlan: Codable, Equatable, Sendable {
+    /// The model's production plan, written before the edits. Optional, so older replies decode.
+    public var plan: String?
     public var summary: String
     public var edits: [Edit]
 
@@ -152,7 +154,10 @@ public extension EditPlan {
     /// Strict JSON Schema for the plan. Every field is required and nullable, which
     /// both Claude structured output and the Codex output schema accept.
     static let jsonSchema = """
-    {"type":"object","additionalProperties":false,"required":["summary","edits"],"properties":{\
+    {"type":"object","additionalProperties":false,"required":["plan","summary","edits"],"properties":{\
+    "plan":{"type":"string","description":"Written before the edits. For a whole song: genre, key, tempo, \
+    form with bars and length, chord progression per section, energy per section, palette, register map. \
+    For a small change: one sentence."},\
     "summary":{"type":"string","description":"One short sentence for the musician about what changed."},\
     "edits":{"type":"array","items":{"type":"object","additionalProperties":false,\
     "required":["op","layer_id","section_id","name","role","code","gain","bpm","title","bars","layers","position"],"properties":{\
