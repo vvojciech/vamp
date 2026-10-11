@@ -124,6 +124,14 @@ private func layer(_ id: String, _ role: LayerRole, code: String = "x", gain: Do
         #expect(notes.first?.hasPrefix("kick is quiet") == true)
     }
 
+    @Test func moreThanEightLayersInASectionIsClutter() {
+        let ids = (1...9).map { "l\($0)" }
+        let song = Song(title: "C", bpm: 100, layers: ids.map { layer($0, .fx, gain: 0.3) },
+                        sections: [Section(id: "s", name: "Peak", bars: 8, layerIDs: ids)])
+        let notes = SongCritic.mix(song, events: [:], sections: [(0..<8, ids)]).notes
+        #expect(notes.contains { $0.contains("Peak plays 9 layers") })
+    }
+
     @Test func averagedJudgesMeanTheScoresAndKeepDistinctNotes() {
         let a = Scorecard(aspects: [.init(name: .melody, score: 7, notes: ["Lift the hook.", "Vary bar 4."]), .init(name: .mix, score: 9, notes: [])])
         let b = Scorecard(aspects: [.init(name: .melody, score: 8, notes: ["Lift the hook.", "Answer the motif."]), .init(name: .mix, score: 8, notes: ["Lower the pad."])])

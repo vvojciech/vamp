@@ -126,6 +126,12 @@ extension SongCritic {
             }.reduce(0, +)
             return load > 4 ? "\(sectionName(song, startingAt: range.lowerBound) ?? "bars \(range.lowerBound + 1)-\(range.upperBound)") (\(String(format: "%.1f", load)))" : nil
         }
+        let crowded = sections.filter { $0.1.count > 8 }.map { range, ids in
+            "\(sectionName(song, startingAt: range.lowerBound) ?? "Bars \(range.lowerBound + 1)-\(range.upperBound)") plays \(ids.count) layers"
+        }
+        if !crowded.isEmpty {
+            m.penalise(1, "\(crowded.joined(separator: "; ")). More than 8 at once clutters the mix: merge or drop layers there.")
+        }
         if !overloaded.isEmpty {
             m.penalise(1, "Too much total gain may clip in \(overloaded.joined(separator: ", ")). Keep the sum under 4: lower pads, chords and fx first.")
         }

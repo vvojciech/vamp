@@ -53,23 +53,30 @@ public enum Critique {
     """
 
     /// The request the editing agent gets for a revision round.
+    /// Asks for a focused revision: fix the two weakest aspects completely, keep everything else.
+    /// Fixing every note at once tends to add layers and break the mix.
     public static func revisionRequest(card: Scorecard, goal: Double, verdict: String) -> String {
+        let weakest = card.aspects.filter { $0.score < goal }.sorted { $0.score < $1.score }
+        let now = Scorecard(aspects: Array(weakest.prefix(2)))
+        let later = Scorecard(aspects: Array(weakest.dropFirst(2)))
         let strong = card.aspects.filter { $0.score >= goal }.map(\.name.label)
-        let protect = strong.isEmpty ? "" : "\nDo not make these worse: \(strong.joined(separator: ", ")). Leave the layers that carry them alone unless a fix needs them.\n"
+        let protect = strong.isEmpty ? "" : "\nDo not make these worse: \(strong.joined(separator: ", ")).\n"
         return """
-        Improve this song until every aspect scores \(String(format: "%.0f", goal)) or more. Fix the weakest \
-        aspects first. You may add, rewrite or remove layers and sections, and use section variations. \
-        Make every change the critique asks for that fits the song, and check that each change does not \
-        create a new problem (for example, a new layer raises the total gain). Improve existing layers \
-        and section variations before you add layers. Add a layer only when no existing one can do the \
-        job, and then lower or remove another one in that section. Give reverb and delay to at most \
-        three layers.
+        Revise this song so that the aspects in the first list reach \(String(format: "%.0f", goal)) or more. Fix \
+        them completely, and change nothing that they do not need. The second list is context only: \
+        do not act on it in this round, but do not make those aspects worse.
+        Improve existing layers and section variations before you add layers. Add a layer only when no \
+        existing one can do the job, and then lower or remove another one in that section. Keep at most \
+        8 layers in any section and the sum of gains under 4. Give reverb and delay to at most three layers.
         \(protect)
         VERDICT
         \(verdict)
 
-        CRITIQUE
-        \(card.report)
+        FIX NOW
+        \(now.report)
+
+        FOR LATER
+        \(later.report.isEmpty ? "Nothing." : later.report)
         """
     }
 }

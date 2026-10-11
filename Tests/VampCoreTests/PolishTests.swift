@@ -81,6 +81,20 @@ private actor Log {
         #expect(text.contains("Close, but the hook is weak."))
         #expect(text.contains("Do not make these worse: Form"))
     }
+
+    @Test func revisionFocusesOnTheTwoWeakestAspects() {
+        let card = Scorecard(aspects: [
+            .init(name: .mix, score: 6.8, notes: ["Lower the pad."]),
+            .init(name: .sound, score: 7, notes: ["Give the arp its own timbre."]),
+            .init(name: .groove, score: 7.5, notes: ["Vary the hats."]),
+            .init(name: .form, score: 9.2, notes: []),
+        ])
+        let text = Critique.revisionRequest(card: card, goal: 9, verdict: "v")
+        let focus = text.components(separatedBy: "FIX NOW")[1].components(separatedBy: "FOR LATER")[0]
+        #expect(focus.contains("Lower the pad.") && focus.contains("Give the arp its own timbre."))
+        #expect(!focus.contains("Vary the hats."))
+        #expect(text.components(separatedBy: "FOR LATER")[1].contains("Vary the hats."))
+    }
 }
 
 private actor Counter {
