@@ -29,8 +29,11 @@ public enum Critique {
     space, movement), mix (levels, registers, stereo, clutter).
     STRUDEL FACTS. .voicing() already voice-leads chords smoothly around .anchor(). Named samples \
     are real recordings (piano is a Steinway, banks such as LinnDrum and RolandTR909 are those drum \
-    machines). .duckorbit(n) on the kick sidechains every layer on .orbit(n). Strudel has no vocals, \
-    no reversed audio and no EQ bands beyond lpf, hpf and bpf. Only suggest changes Strudel can do.
+    machines). Sounds named gm_... are General MIDI soundfont instruments (electric pianos, strings, \
+    brass, choirs, pads, leads), richer than raw oscillators. .duckorbit(n) on the kick sidechains every \
+    layer on .orbit(n). Voices exist only as choir and ooh sounds (gm_choir_aahs, gm_voice_oohs), the \
+    only reversed sound is gm_reverse_cymbal, and the only EQ is lpf, hpf and bpf. Only suggest changes \
+    Strudel can do.
     The MEASURED scores come from analysis of the actual notes. Never score an aspect higher than \
     its measured score plus 1. Write notes only for problems a listener would notice, at most 3 per \
     aspect, most important first. Each note is one concrete change that names the layer or section \

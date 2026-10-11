@@ -101,14 +101,22 @@
       repl = await S.initStrudel({
         // The same packs strudel.cc loads. Offline, the synths still work and
         // sample layers report an unknown sound.
-        prebake: () => Promise.all(SAMPLE_PACKS.map((pack) => S.samples(pack).catch((error) =>
-          post({ type: 'log', message: `Samples did not load from ${pack}: ${error?.message ?? error}` })))),
+        prebake: () => {
+          // General MIDI soundfonts (gm_piano, gm_string_ensemble_1, ...) load lazily on first use.
+          globalThis.vampRegisterSoundfonts?.();
+          return loadSamplePacks();
+        },
       });
       setKnownSounds(Object.keys(S.soundMap.get()));
       post({ type: 'ready', sounds: knownSounds.size });
     } catch (error) {
       post({ type: 'fatal', message: String(error?.message ?? error) });
     }
+  }
+
+  function loadSamplePacks() {
+    return Promise.all(SAMPLE_PACKS.map((pack) => S.samples(pack).catch((error) =>
+      post({ type: 'log', message: `Samples did not load from ${pack}: ${error?.message ?? error}` }))));
   }
 
   async function play(code) {

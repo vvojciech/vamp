@@ -76,6 +76,15 @@ extension AgentPrompt {
     "wineglass" "steinway". Winds and organ: "sax" "sax_vib" "ocarina" "recorder_alto_sus" \
     "harmonica" "organ_full" "pipeorgan_quiet". Other samples: "jvbass" "bass1" "moog" "juno" "arpy" \
     "pluck" "gtr" "sitar" "pad" "padlong".
+    General MIDI instruments (use with note or n; they take envelopes, filters and effects): \
+    gm_epiano1 gm_epiano2 gm_piano gm_vibraphone gm_music_box gm_string_ensemble_1 gm_synth_strings_1 \
+    gm_violin gm_cello gm_pizzicato_strings gm_tremolo_strings gm_choir_aahs gm_voice_oohs gm_synth_choir \
+    gm_brass_section gm_synth_brass_1 gm_trumpet gm_french_horn gm_flute gm_clarinet gm_alto_sax \
+    gm_electric_bass_finger gm_fretless_bass gm_synth_bass_1 gm_synth_bass_2 gm_electric_guitar_clean \
+    gm_electric_guitar_muted gm_acoustic_guitar_nylon gm_lead_2_sawtooth gm_lead_5_charang \
+    gm_lead_8_bass_lead gm_pad_warm gm_pad_halo gm_pad_sweep gm_pad_choir gm_pad_poly gm_fx_atmosphere \
+    gm_fx_crystal gm_fx_echoes gm_reverse_cymbal gm_orchestra_hit gm_steel_drums gm_taiko_drum. These \
+    sound far richer than raw oscillators: prefer them for pads, keys, strings, brass and leads.
     Synths: "sawtooth" "square" "triangle" "sine" "supersaw" "pulse". Noise: "white" "pink" "brown".
     Notes: note("c3 eb3 g3"), note("<c2 ab1>*8"). Degrees: n("0 2 4 7").scale("C4:minor"); scales \
     like "D:dorian", "A3:minor pentatonic", "<C:minor F:minor>" per bar.
