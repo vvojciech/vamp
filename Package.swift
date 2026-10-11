@@ -4,6 +4,7 @@ import PackageDescription
 let package = Package(
     name: "Vamp",
     platforms: [.macOS(.v14)],
+    products: [.library(name: "VampCore", targets: ["VampCore"])],
     targets: [
         .target(name: "VampCore"),
         .executableTarget(name: "Vamp", dependencies: ["VampCore"]),
