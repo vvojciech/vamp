@@ -47,13 +47,20 @@ struct LaneLayout {
     }
 }
 
-/// Draws one layer's events for `bars` bars, with notes under the playhead lit up.
+/// Draws one layer's events for the bars in view, with notes under the playhead lit up.
 struct PianoRoll: View {
     let events: [NoteEvent]
+    /// First bar in view, in song time.
+    let start: Int
     let bars: Int
     let tint: Color
     let dimmed: Bool
+    /// Playhead in view time (0 ..< bars), or nil when stopped.
     let position: Double?
+    /// Song-time bar ranges where this layer rests.
+    var rests: [Range<Double>] = []
+    /// Song-time bars where a section starts.
+    var boundaries: [Int] = []
 
     var body: some View {
         Canvas { context, size in
@@ -61,20 +68,44 @@ struct PianoRoll: View {
             let inset: CGFloat = 8
             let height = size.height - inset * 2
             let barWidth = size.width / CGFloat(bars)
+            let first = Double(start), last = Double(start + bars)
+            func x(_ bar: Double) -> CGFloat { CGFloat(bar - first) * barWidth }
 
-            for beat in 0..<(bars * 4) where beat > 0 {
-                let x = CGFloat(beat) * barWidth / 4
-                let path = Path { $0.move(to: CGPoint(x: x, y: 0)); $0.addLine(to: CGPoint(x: x, y: size.height)) }
+            // Beat lines only when there is room for them; bar lines always.
+            let beatsPerLine = barWidth > 56 ? 1 : 4
+            for beat in stride(from: beatsPerLine, to: bars * 4, by: beatsPerLine) {
+                let lineX = CGFloat(beat) * barWidth / 4
+                let path = Path { $0.move(to: CGPoint(x: lineX, y: 0)); $0.addLine(to: CGPoint(x: lineX, y: size.height)) }
                 context.stroke(path, with: .color(beat % 4 == 0 ? Theme.lineStrong : Theme.line), lineWidth: 1)
             }
 
-            let now = position.map { $0.truncatingRemainder(dividingBy: Double(bars)) }
-            for event in events where event.begin < Double(bars) {
+            for rest in rests where rest.upperBound > first && rest.lowerBound < last {
+                let rect = CGRect(x: x(max(rest.lowerBound, first)), y: 0,
+                                  width: x(min(rest.upperBound, last)) - x(max(rest.lowerBound, first)), height: size.height)
+                context.fill(Path(rect), with: .color(Theme.window.opacity(0.55)))
+                var stripes = Path()
+                var stripeX = rect.minX - size.height
+                while stripeX < rect.maxX {
+                    stripes.move(to: CGPoint(x: stripeX, y: size.height))
+                    stripes.addLine(to: CGPoint(x: stripeX + size.height, y: 0))
+                    stripeX += 9
+                }
+                var clipped = context
+                clipped.clip(to: Path(rect))
+                clipped.stroke(stripes, with: .color(Color.white.opacity(0.035)), lineWidth: 1)
+            }
+
+            for bar in boundaries where Double(bar) > first && Double(bar) < last {
+                let path = Path { $0.move(to: CGPoint(x: x(Double(bar)), y: 0)); $0.addLine(to: CGPoint(x: x(Double(bar)), y: size.height)) }
+                context.stroke(path, with: .color(Color.white.opacity(0.32)), lineWidth: 1.5)
+            }
+
+            for event in events where event.begin >= first && event.begin < last {
                 let (y, h) = layout.row(for: event, height: height)
-                let x = CGFloat(event.begin) * barWidth
-                let w = max(CGFloat(min(event.end, Double(bars)) - event.begin) * barWidth - 1.5, 3)
-                let rect = CGRect(x: x + 0.75, y: inset + y - h / 2, width: w, height: h)
-                let active = now.map { event.begin <= $0 && $0 < event.end } ?? false
+                let w = max(CGFloat(min(event.end, last) - event.begin) * barWidth - 1.5, 3)
+                let rect = CGRect(x: x(event.begin) + 0.75, y: inset + y - h / 2, width: w, height: h)
+                let local = (event.begin - first, event.end - first)
+                let active = position.map { local.0 <= $0 && $0 < local.1 } ?? false
                 let alpha = (dimmed ? 0.28 : 0.55 + 0.45 * min(event.gain, 1)) * (active ? 1 : 0.82)
                 let shape = Path(roundedRect: rect, cornerRadius: min(h / 2, 3.5))
                 if active && !dimmed {

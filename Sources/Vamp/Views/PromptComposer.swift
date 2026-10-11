@@ -21,7 +21,7 @@ struct PromptComposer: View {
             HStack(spacing: 8) {
                 Menu {
                     ForEach(BackendKind.allCases) { kind in
-                        Section(kind.label) {
+                        SwiftUI.Section(kind.label) {
                             ForEach(kind.models, id: \.id) { option in
                                 Button {
                                     app.backend = kind

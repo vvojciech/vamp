@@ -25,10 +25,16 @@ final class AppModel {
     let engine = StrudelEngine()
 
     private(set) var song: Song
-    var selectedLayerID: String?
+    var selectedLayerID: String? { didSet { if selectedLayerID != nil { inspectsSection = false } } }
+    var selectedSectionID: String? { didSet { if selectedSectionID == nil { loopsSection = false } } }
+    /// True when the inspector shows the selected section instead of the selected layer.
+    var inspectsSection = false
+    /// Play and show only the selected section.
+    var loopsSection = false { didSet { scheduleAnalysis(); if engine.isPlaying { playCurrent() } } }
+    /// View length when the song has no sections.
     var bars = 4 { didSet { scheduleAnalysis() } }
     private(set) var analysis: [String: Result<[NoteEvent], LayerError>] = [:]
-    private(set) var chat: [ChatEntry] = []
+    var chat: [ChatEntry] = []
     private(set) var undoStack: [Song] = []
     private(set) var redoStack: [Song] = []
 
@@ -37,9 +43,10 @@ final class AppModel {
     }
     var model: String { didSet { UserDefaults.standard.set(model, forKey: "model.\(backend.rawValue)") } }
 
+    /// Last program per layer that ran, so a typo never silences a layer.
     @ObservationIgnored private var lastGood: [String: String] = [:]
     @ObservationIgnored private var analysisTask: Task<Void, Never>?
-    @ObservationIgnored private var agentTask: Task<Void, Never>?
+    @ObservationIgnored var agentTask: Task<Void, Never>?
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var lastTypingSnapshot = Date.distantPast
 
@@ -54,13 +61,33 @@ final class AppModel {
         scheduleAnalysis(delay: 0)
     }
 
-    var isAgentWorking: Bool { chat.last?.state == .working }
-    var sessionCost: Double { chat.compactMap(\.costUSD).reduce(0, +) }
+    // MARK: View window
+
+    /// The looped section, when looping is on.
+    var loopedSection: Section? { loopsSection ? selectedSectionID.flatMap(song.section) : nil }
+
+    /// The bars the sheet shows: (first bar, count).
+    var window: (start: Int, count: Int) {
+        if let looped = loopedSection, let index = song.sections.firstIndex(of: looped) {
+            return (song.sections[..<index].map(\.bars).reduce(0, +), looped.bars)
+        }
+        return (0, song.totalBars ?? bars)
+    }
+
+    /// Bar ranges where a layer rests, for shading in its lane.
+    func rests(for layerID: String) -> [Range<Double>] {
+        var start = 0, ranges: [Range<Double>] = []
+        for section in song.sections {
+            if !section.layerIDs.contains(layerID) { ranges.append(Double(start)..<Double(start + section.bars)) }
+            start += section.bars
+        }
+        return ranges
+    }
 
     // MARK: Editing
 
     /// Every change goes through here, so undo, analysis, playback and saving stay in step.
-    func update(_ label: String = "", coalesce: Bool = false, _ change: (inout Song) -> Void) {
+    func update(coalesce: Bool = false, _ change: (inout Song) -> Void) {
         var next = song
         change(&next)
         guard next != song else { return }
@@ -70,16 +97,20 @@ final class AppModel {
             redoStack.removeAll()
         }
         if coalesce { lastTypingSnapshot = Date() }
-        song = next
-        if let id = selectedLayerID, song.index(of: id) == nil { selectedLayerID = song.layers.first?.id }
-        scheduleAnalysis(delay: coalesce ? 0.25 : 0)
-        scheduleSave()
+        replace(with: next, delay: coalesce ? 0.25 : 0)
     }
 
     func updateLayer(_ id: String, coalesce: Bool = false, _ change: (inout Layer) -> Void) {
         update(coalesce: coalesce) { song in
             guard let i = song.index(of: id) else { return }
             change(&song.layers[i])
+        }
+    }
+
+    func updateSection(_ id: String, coalesce: Bool = false, _ change: (inout Section) -> Void) {
+        update(coalesce: coalesce) { song in
+            guard let i = song.sections.firstIndex(where: { $0.id == id }) else { return }
+            change(&song.sections[i])
         }
     }
 
@@ -95,10 +126,11 @@ final class AppModel {
         replace(with: next)
     }
 
-    private func replace(with newSong: Song) {
+    private func replace(with newSong: Song, delay: Double = 0) {
         song = newSong
         if let id = selectedLayerID, song.index(of: id) == nil { selectedLayerID = song.layers.first?.id }
-        scheduleAnalysis(delay: 0)
+        if let id = selectedSectionID, song.section(id) == nil { selectedSectionID = nil; inspectsSection = false }
+        scheduleAnalysis(delay: delay)
         scheduleSave()
     }
 
@@ -113,20 +145,18 @@ final class AppModel {
         guard lastGood.isEmpty else { playCurrent(); return }
         // Nothing checked yet (for example just after launch): check first, then play.
         Task {
-            let result = await engine.analyze(song.layers, cycles: bars)
-            for case let (id, .success) in result.map({ ($0.key, $0.value) }) {
-                lastGood[id] = song.layers.first { $0.id == id }?.code
-            }
+            record(await analyze(song, cycles: window.start + window.count))
             playCurrent()
         }
     }
 
-    private func playCurrent() {
+    func playCurrent() {
         var playable = song
         for i in playable.layers.indices where lastGood[playable.layers[i].id] == nil {
             playable.layers[i].muted = true
         }
-        guard let code = playable.composedCode(codeOverrides: lastGood) else { engine.stop(); return }
+        let code = playable.composedCode(codeOverrides: lastGood, onlySection: loopedSection?.id)
+        guard let code else { engine.stop(); return }
         engine.play(code)
     }
 
@@ -135,17 +165,32 @@ final class AppModel {
 
     // MARK: Analysis
 
+    /// Note events for each layer's full program, over the first `cycles` bars.
+    func analyze(_ song: Song, cycles: Int) async -> [String: Result<[NoteEvent], LayerError>] {
+        let programs = song.layers.map { layer -> Layer in
+            var copy = layer
+            copy.code = song.program(for: layer) ?? "silence"
+            return copy
+        }
+        return await engine.analyze(programs, cycles: max(cycles, 1))
+    }
+
+    private func record(_ result: [String: Result<[NoteEvent], LayerError>]) {
+        for (id, value) in result {
+            guard case .success = value, let layer = song.layers.first(where: { $0.id == id }) else { continue }
+            lastGood[id] = song.program(for: layer)
+        }
+    }
+
     private func scheduleAnalysis(delay: Double = 0) {
         analysisTask?.cancel()
         analysisTask = Task {
             if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
             guard !Task.isCancelled, engine.status == .ready else { return }
-            let result = await engine.analyze(song.layers, cycles: bars)
+            let result = await analyze(song, cycles: window.start + window.count)
             guard !Task.isCancelled else { return }
             analysis = result
-            for (id, value) in result {
-                if case .success = value, let layer = song.layers.first(where: { $0.id == id }) { lastGood[id] = layer.code }
-            }
+            record(result)
             if engine.isPlaying { playCurrent() }
         }
     }
@@ -153,67 +198,9 @@ final class AppModel {
     /// Called when the engine finishes loading.
     func engineDidBecomeReady() { scheduleAnalysis(delay: 0) }
 
-    // MARK: Agent
-
-    func send(_ request: String) {
-        let text = request.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, !isAgentWorking else { return }
-        let kind = backend, chosen = model
-        chat.append(ChatEntry(request: text, backend: kind.displayName(model: chosen), songBefore: song))
-        let history = chat.filter { $0.state == .done }.map { Turn(request: $0.request, summary: $0.summary) }
-        let started = Date()
-        let engine = engine
-
-        agentTask = Task {
-            do {
-                let result = try await AgentSession.run(
-                    request: text, song: song, history: history,
-                    ask: { system, user in try await Backends.ask(kind: kind, model: chosen, system: system, user: user) },
-                    validate: { candidate in
-                        let found = await engine.analyze(candidate.layers, cycles: 4)
-                        return found.compactMapValues { if case let .failure(e) = $0 { e.message } else { nil } }
-                    })
-                update { $0 = result.song }
-                finishEntry { entry in
-                    entry.state = .done
-                    entry.summary = result.summary
-                    entry.changes = result.changes
-                    // CLI backends report list-price figures, but the plan pays, so only the API shows dollars.
-                    entry.costUSD = kind == .anthropicAPI ? result.costUSD : nil
-                    entry.tokens = result.inputTokens + result.outputTokens
-                    entry.attempts = result.attempts
-                }
-                if case let .added(id)? = result.changes.first(where: { if case .added = $0 { true } else { false } }) {
-                    selectedLayerID = id
-                }
-            } catch is CancellationError {
-                finishEntry { $0.state = .failed("Stopped.") }
-            } catch {
-                finishEntry { $0.state = .failed(error.localizedDescription) }
-            }
-            finishEntry { $0.seconds = Date().timeIntervalSince(started) }
-            scheduleSave()
-        }
-    }
-
-    func cancelAgent() { agentTask?.cancel() }
-
-    /// Puts the song back to how it was before this prompt.
-    func revert(_ entry: ChatEntry) { update { $0 = entry.songBefore } }
-
-    func clearChat() {
-        chat.removeAll { $0.state != .working }
-        scheduleSave()
-    }
-
-    private func finishEntry(_ change: (inout ChatEntry) -> Void) {
-        guard !chat.isEmpty else { return }
-        change(&chat[chat.count - 1])
-    }
-
     // MARK: Saving
 
-    private func scheduleSave() {
+    func scheduleSave() {
         saveTask?.cancel()
         saveTask = Task {
             try? await Task.sleep(for: .seconds(0.8))

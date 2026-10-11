@@ -9,6 +9,8 @@ enum Persistence {
     }
 
     private static var url: URL {
+        // VAMP_SESSION points a test instance at its own file, so it never touches real work.
+        if let path = ProcessInfo.processInfo.environment["VAMP_SESSION"] { return URL(fileURLWithPath: path) }
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return base.appendingPathComponent("Vamp", isDirectory: true).appendingPathComponent("session.json")
     }

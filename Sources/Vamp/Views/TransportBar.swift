@@ -21,13 +21,19 @@ struct TransportBar: View {
 
             TempoControl()
 
-            Picker("Bars", selection: Binding(get: { app.bars }, set: { app.bars = $0 })) {
-                ForEach([1, 2, 4, 8], id: \.self) { Text("\($0) bar\($0 == 1 ? "" : "s")").tag($0) }
+            if let total = app.song.totalBars {
+                Label(songLength(bars: total), systemImage: "rectangle.split.3x1")
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .help("\(app.song.sections.count) sections")
+            } else {
+                Picker("Bars", selection: Binding(get: { app.bars }, set: { app.bars = $0 })) {
+                    ForEach([1, 2, 4, 8], id: \.self) { Text("\($0) bar\($0 == 1 ? "" : "s")").tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .help("How many bars the sheet shows")
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-            .help("How many bars the sheet shows")
 
             Spacer()
 
@@ -58,6 +64,14 @@ struct TransportBar: View {
         .padding(.trailing, 18)
         .frame(height: 60)
         .background(Theme.panel)
+    }
+}
+
+/// "28 bars · 1:00" at the current tempo.
+private extension TransportBar {
+    func songLength(bars: Int) -> String {
+        let seconds = Int((Double(bars) * 240 / app.song.bpm).rounded())
+        return "\(bars) bars · \(seconds / 60):\(String(format: "%02d", seconds % 60))"
     }
 }
 

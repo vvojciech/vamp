@@ -9,7 +9,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Agent") {
+            SwiftUI.Section("Agent") {
                 Picker("Backend", selection: Binding(get: { app.backend }, set: { app.backend = $0 })) {
                     ForEach(BackendKind.allCases) { Text($0.label).tag($0) }
                 }
@@ -24,7 +24,7 @@ struct SettingsView: View {
                     }
                 }
             }
-            Section("Anthropic API") {
+            SwiftUI.Section("Anthropic API") {
                 SecureField("API key", text: $apiKey, prompt: Text("sk-ant-…"))
                 HStack {
                     Text("Stored in your login keychain.").font(.callout).foregroundStyle(.secondary)

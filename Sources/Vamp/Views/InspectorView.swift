@@ -1,12 +1,15 @@
 import SwiftUI
 import VampCore
 
-/// Everything about the selected layer, editable by hand. Changes play as soon as the code runs.
+/// Everything about the selected layer or section, editable by hand. Changes play as soon as the code runs.
 struct InspectorView: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        if let id = app.selectedLayerID, let layer = app.song.layers.first(where: { $0.id == id }) {
+        if app.inspectsSection, let id = app.selectedSectionID, let section = app.song.section(id) {
+            SectionInspector(section: section)
+                .id(section.id)
+        } else if let id = app.selectedLayerID, let layer = app.song.layers.first(where: { $0.id == id }) {
             LayerInspector(layer: layer)
                 .id(layer.id)
         } else {
@@ -22,9 +25,26 @@ struct InspectorView: View {
 private struct LayerInspector: View {
     @Environment(AppModel.self) private var app
     let layer: Layer
+    /// Nil edits the code used everywhere. A section id edits that section's own version.
+    @State private var scope: String?
 
     private var error: String? {
         if case let .failure(e)? = app.analysis[layer.id] { e.message } else { nil }
+    }
+
+    /// Sections where this layer plays, which are the places it can have its own code.
+    private var playingSections: [Section] { app.song.sections.filter { $0.layerIDs.contains(layer.id) } }
+
+    private var codeBinding: Binding<String> {
+        Binding(
+            get: { scope.flatMap { app.song.section($0)?.variations[layer.id] } ?? layer.code },
+            set: { code in
+                if let scope {
+                    app.updateSection(scope, coalesce: true) { $0.variations[layer.id] = code }
+                } else {
+                    app.updateLayer(layer.id, coalesce: true) { $0.code = code }
+                }
+            })
     }
 
     var body: some View {
@@ -51,7 +71,7 @@ private struct LayerInspector: View {
                     .foregroundStyle(Theme.muted)
                 Button { duplicate() } label: { Image(systemName: "plus.square.on.square") }
                     .help("Duplicate layer")
-                Button(role: .destructive) { app.update { $0.layers.removeAll { $0.id == layer.id } } } label: {
+                Button(role: .destructive) { app.update { $0.removeLayer(layer.id) } } label: {
                     Image(systemName: "trash")
                 }
                 .help("Delete layer")
@@ -59,9 +79,10 @@ private struct LayerInspector: View {
             .buttonStyle(.borderless)
             .foregroundStyle(Theme.muted)
 
-            CodeEditor(text: Binding(
-                get: { layer.code },
-                set: { code in app.updateLayer(layer.id, coalesce: true) { $0.code = code } }))
+            if !playingSections.isEmpty { ScopeBar(layer: layer, sections: playingSections, scope: $scope) }
+
+            CodeEditor(text: codeBinding)
+                .id(scope ?? "everywhere")
                 .background(RoundedRectangle(cornerRadius: 10).fill(Theme.window))
                 .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(error == nil ? Theme.line : Theme.danger.opacity(0.6)))
 
@@ -94,7 +115,57 @@ private struct LayerInspector: View {
             copy.solo = false
             newID = copy.id
             song.layers.insert(copy, at: index + 1)
+            for i in song.sections.indices where song.sections[i].layerIDs.contains(layer.id) {
+                song.sections[i].layerIDs.append(copy.id)
+                song.sections[i].variations[copy.id] = song.sections[i].variations[layer.id]
+            }
         }
         app.selectedLayerID = newID
+    }
+}
+
+/// Chooses which version of the code the editor shows: everywhere, or one section's own.
+private struct ScopeBar: View {
+    @Environment(AppModel.self) private var app
+    let layer: Layer
+    let sections: [Section]
+    @Binding var scope: String?
+
+    var body: some View {
+        HStack(spacing: 6) {
+            chip("Everywhere", isOn: scope == nil, marked: false) { scope = nil }
+            ForEach(sections) { section in
+                chip(section.name, isOn: scope == section.id, marked: section.variations[layer.id] != nil) {
+                    // The first edit in a section starts from the code used everywhere.
+                    if section.variations[layer.id] == nil {
+                        app.updateSection(section.id) { $0.variations[layer.id] = layer.code }
+                    }
+                    scope = section.id
+                }
+            }
+            Spacer()
+            if let scope, app.song.section(scope)?.variations[layer.id] != nil {
+                Button("Use the everywhere code here") {
+                    app.updateSection(scope) { $0.variations[layer.id] = nil }
+                    self.scope = nil
+                }
+                .buttonStyle(.borderless).font(.system(size: 11.5)).foregroundStyle(Theme.muted)
+            }
+        }
+    }
+
+    private func chip(_ title: String, isOn: Bool, marked: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                if marked { Image(systemName: "wand.and.stars").font(.system(size: 9)) }
+                Text(title).lineLimit(1)
+            }
+            .font(.system(size: 11.5, weight: .medium))
+            .padding(.horizontal, 10).frame(height: 24)
+            .foregroundStyle(isOn ? Color.black.opacity(0.85) : Theme.muted)
+            .background(Capsule().fill(isOn ? Theme.sectionTint : Theme.raised))
+        }
+        .buttonStyle(.plain)
+        .help(marked ? "\(title) has its own code for this layer" : "Edit this layer for \(title) only")
     }
 }

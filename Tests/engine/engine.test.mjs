@@ -61,6 +61,12 @@ test('unknown chord symbols are errors, known ones pass', () => {
   assert.ok(good.events);
 });
 
+test('arranged programs place each section in song time', () => {
+  const code = 'arrange(\n  [2, silence],\n  [1, (\nnote("<c3 e3>")\n  )],\n  [1, (\nnote("g3")\n  )]\n)';
+  const [result] = analyze([{ id: 'a', code }], 4);
+  assert.deepEqual(result.events.map((e) => [e.begin, e.midi]), [[2, 48], [3, 55]]);
+});
+
 test('the starter song analyses without errors', () => {
   const results = analyze(starter.layers, 4);
   for (const r of results) assert.equal(r.error, undefined, `${r.id}: ${r.error}`);

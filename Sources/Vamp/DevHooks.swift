@@ -6,6 +6,7 @@ import SwiftUI
 ///   VAMP_PROMPT="..."      send this prompt to the agent once the engine is ready
 ///   VAMP_SNAPSHOT=/a.png   render the window to a PNG (after VAMP_SNAPSHOT_DELAY seconds, default 4)
 ///   VAMP_SELECT=layer-id   select this layer before the snapshot
+///   VAMP_SESSION=/s.json   load and save the session here instead of Application Support
 @MainActor
 enum DevHooks {
     static func run(_ app: AppModel) {

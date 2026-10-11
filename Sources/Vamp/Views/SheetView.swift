@@ -1,7 +1,7 @@
 import SwiftUI
 import VampCore
 
-/// The music sheet: a bar ruler, then one lane per layer, all sharing one playhead.
+/// The music sheet: the arrangement, a bar ruler, then one lane per layer, all sharing one playhead.
 struct SheetView: View {
     @Environment(AppModel.self) private var app
     static let headerWidth: CGFloat = 214
@@ -10,9 +10,12 @@ struct SheetView: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
                 TimelineView(.animation(paused: !app.engine.isPlaying)) { timeline in
+                    let window = app.window
                     let position = app.engine.position(at: timeline.date, bpm: app.song.bpm)
+                        .map { $0.truncatingRemainder(dividingBy: Double(window.count)) }
                     VStack(spacing: 6) {
-                        Ruler(bars: app.bars, position: position)
+                        ArrangementBar(position: position)
+                        Ruler(start: window.start, bars: window.count, position: position)
                         ForEach(app.song.layers) { layer in
                             LaneView(layer: layer, position: position).id(layer.id)
                         }
@@ -36,6 +39,7 @@ struct SheetView: View {
 }
 
 private struct Ruler: View {
+    let start: Int
     let bars: Int
     let position: Double?
 
@@ -43,16 +47,17 @@ private struct Ruler: View {
         HStack(spacing: 12) {
             Spacer().frame(width: SheetView.headerWidth)
             GeometryReader { geo in
+                let step = max(1, Int((Double(bars) * 34 / max(geo.size.width, 1)).rounded(.up)))
                 ZStack(alignment: .topLeading) {
-                    ForEach(0..<bars, id: \.self) { bar in
-                        Text("\(bar + 1)")
+                    ForEach(Array(stride(from: 0, to: bars, by: step)), id: \.self) { bar in
+                        Text("\(start + bar + 1)")
                             .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                             .foregroundStyle(Theme.faint)
                             .offset(x: geo.size.width / CGFloat(bars) * CGFloat(bar) + 4, y: 3)
                     }
                     if let position {
-                        let x = geo.size.width * CGFloat(position.truncatingRemainder(dividingBy: Double(bars)) / Double(bars))
-                        Capsule().fill(Theme.playhead).frame(width: 9, height: 9).offset(x: x - 4.5, y: 4)
+                        Capsule().fill(Theme.playhead).frame(width: 9, height: 9)
+                            .offset(x: geo.size.width * CGFloat(position / Double(bars)) - 4.5, y: 4)
                     }
                 }
             }
@@ -66,27 +71,30 @@ private struct LaneView: View {
     let layer: Layer
     let position: Double?
 
-    private var isSelected: Bool { app.selectedLayerID == layer.id }
+    private var isSelected: Bool { app.selectedLayerID == layer.id && !app.inspectsSection }
     private var isAudible: Bool { app.song.audibleLayers.contains { $0.id == layer.id } }
 
     var body: some View {
         let tint = Theme.color(for: layer.role)
         let result = app.analysis[layer.id]
+        let window = app.window
         HStack(spacing: 12) {
             LaneHeader(layer: layer,
                        error: result.flatMap { if case let .failure(e) = $0 { e.message } else { nil } },
-                       eventsPerBar: result.flatMap { if case let .success(events) = $0 { events.count / max(app.bars, 1) } else { nil } })
+                       eventsPerBar: result.flatMap { if case let .success(events) = $0 { eventsPerBar(events) } else { nil } })
                 .frame(width: SheetView.headerWidth)
             ZStack {
                 if case let .success(events) = result {
-                    PianoRoll(events: events, bars: app.bars, tint: tint, dimmed: !isAudible, position: position)
+                    PianoRoll(events: events, start: window.start, bars: window.count, tint: tint,
+                              dimmed: !isAudible, position: position,
+                              rests: app.rests(for: layer.id), boundaries: sectionStarts)
                 } else if result == nil {
                     ProgressView().controlSize(.small)
                 } else {
                     Label("This layer has an error. The last working version still plays.", systemImage: "exclamationmark.triangle.fill")
                         .font(.callout).foregroundStyle(Theme.danger.opacity(0.9))
                 }
-                Playhead(bars: app.bars, position: position)
+                Playhead(bars: window.count, position: position)
             }
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 10).fill(Theme.lane))
@@ -100,8 +108,20 @@ private struct LaneView: View {
                 .strokeBorder(isSelected ? tint.opacity(0.55) : .clear, lineWidth: 1)
         )
         .contentShape(Rectangle())
-        .onTapGesture { app.selectedLayerID = layer.id }
+        .onTapGesture { app.selectedLayerID = layer.id; app.inspectsSection = false }
         .animation(.easeOut(duration: 0.15), value: isSelected)
+    }
+
+    private var sectionStarts: [Int] {
+        var bar = 0
+        return app.song.sections.map { section in defer { bar += section.bars }; return bar }
+    }
+
+    /// Busiest bar where the layer plays, so a 4-bar intro does not dilute the count.
+    private func eventsPerBar(_ events: [NoteEvent]) -> Int {
+        var counts: [Int: Int] = [:]
+        for event in events { counts[Int(event.begin), default: 0] += 1 }
+        return counts.values.max() ?? 0
     }
 }
 
@@ -112,8 +132,8 @@ private struct Playhead: View {
     var body: some View {
         GeometryReader { geo in
             if let position {
-                let x = geo.size.width * CGFloat(position.truncatingRemainder(dividingBy: Double(bars)) / Double(bars))
-                Rectangle().fill(Theme.playhead.opacity(0.75)).frame(width: 1.5).offset(x: x)
+                Rectangle().fill(Theme.playhead.opacity(0.75)).frame(width: 1.5)
+                    .offset(x: geo.size.width * CGFloat(position / Double(bars)))
                     .shadow(color: .white.opacity(0.6), radius: 3)
             }
         }
@@ -131,44 +151,5 @@ private struct EmptySheet: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
-    }
-}
-
-/// Starts a new layer from a small template for its role.
-struct AddLayerMenu: View {
-    @Environment(AppModel.self) private var app
-
-    static let templates: [(LayerRole, String)] = [
-        (.drums, "s(\"bd*4, [~ sd]*2, hh*8\")"),
-        (.percussion, "s(\"[~ rm]*2, perc(3,8)\").gain(0.7)"),
-        (.bass, "note(\"<c2 g1 ab1 bb1>*4\").s(\"sawtooth\").lpf(700).decay(0.2).sustain(0)"),
-        (.chords, "chord(\"<Cm7 Ab^7 Fm7 G7>\").voicing().s(\"triangle\").attack(0.05).release(0.6).room(0.4)"),
-        (.pad, "chord(\"<Cm9 Fm9>\").voicing().s(\"supersaw\").attack(1).release(2).lpf(900).room(0.7).gain(0.3)"),
-        (.lead, "n(\"<0 [2 4] 3 [4 7]>\").scale(\"C4:minor\").s(\"square\").lpf(2000).delay(0.3)"),
-        (.arp, "n(\"0 2 4 7 4 2\").fast(2).scale(\"C4:minor\").s(\"triangle\").decay(0.15).sustain(0)"),
-        (.fx, "s(\"white\").struct(\"~ ~ ~ x\").hpf(4000).decay(0.4).sustain(0).gain(0.3)"),
-    ]
-
-    var body: some View {
-        Menu {
-            ForEach(Self.templates, id: \.0) { role, code in
-                Button { add(role, code) } label: { Label(role.label, systemImage: Theme.symbol(for: role)) }
-            }
-        } label: {
-            Label("Add layer", systemImage: "plus")
-                .font(.callout.weight(.medium))
-                .foregroundStyle(Theme.muted)
-        }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-    }
-
-    private func add(_ role: LayerRole, _ code: String) {
-        var newID = ""
-        app.update { song in
-            newID = song.uniqueID(for: role.label)
-            song.layers.append(Layer(id: newID, name: role.label, role: role, code: code))
-        }
-        app.selectedLayerID = newID
     }
 }
