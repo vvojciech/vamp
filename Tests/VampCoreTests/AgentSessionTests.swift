@@ -8,6 +8,14 @@ private func reply(_ json: String, cost: Double? = 0.001) -> BackendReply {
     BackendReply(json: Data(json.utf8), costUSD: cost, inputTokens: 10, outputTokens: 5)
 }
 
+private func addLayer(_ name: String) -> String {
+    #"{"op":"add_layer","layer_id":null,"section_id":null,"name":"\#(name)","role":"lead","code":"note(\"c4\")","gain":null,"bpm":null,"title":null,"bars":null,"layers":null,"position":null}"#
+}
+
+private func addSection(_ name: String, position: Int? = nil) -> String {
+    #"{"op":"add_section","layer_id":null,"section_id":null,"name":"\#(name)","role":null,"code":null,"gain":null,"bpm":null,"title":null,"bars":8,"layers":null,"position":\#(position.map(String.init) ?? "null")}"#
+}
+
 private actor Script {
     var replies: [BackendReply]
     var prompts: [String] = []
@@ -52,6 +60,24 @@ private actor Script {
                 ask: { _, user in await script.next(user) },
                 validate: { _ in ["drums": "SyntaxError"] })
         }
+    }
+
+    @Test func composingFromAnEmptySongCreatesNoLeftoverMainSection() async throws {
+        let empty = Song(title: "Untitled", bpm: 110, layers: [])
+        let plan = #"{"plan":"p","summary":"s","edits":["# + addLayer("Kick") + "," + addSection("Intro") + "," + addSection("Verse") + "]}"
+        let script = Script([reply(plan)])
+        let result = try await AgentSession.run(request: "compose", song: empty, history: [],
+                                                ask: { _, user in await script.next(user) }, validate: { _ in [:] })
+        #expect(result.song.sections.map(\.name) == ["Intro", "Verse"])
+    }
+
+    @Test func aLoopBecomesMainWithOnlyItsOwnLayers() async throws {
+        let plan = #"{"plan":"p","summary":"s","edits":["# + addLayer("Pad") + "," + addSection("Intro", position: 0) + "]}"
+        let script = Script([reply(plan)])
+        let result = try await AgentSession.run(request: "add an intro with a pad", song: song, history: [],
+                                                ask: { _, user in await script.next(user) }, validate: { _ in [:] })
+        #expect(result.song.sections.map(\.name) == ["Intro", "Main"])
+        #expect(result.song.sections[1].layerIDs == ["drums"])
     }
 
     @Test func promptCarriesSongAndHistory() {

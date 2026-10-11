@@ -34,7 +34,11 @@ extension AgentPrompt {
     For a part of a song (intro, verse, chorus, bridge, build-up, breakdown, drop, outro) use \
     sections, never a new layer pretending to be one. Reuse layers with different layer lists. For \
     different notes or rhythm in one section, use update_layer with section_id: that code applies \
-    only there. The first add_section on a loop song wraps the loop as "Main" (8 bars).
+    only there. The first add_section on a loop song wraps the existing loop layers as "Main" (8 bars); \
+    reuse or remove that section as the form needs. An empty song gets no Main section.
+    A new layer joins every section unless you give it a section_id. When the request names sections \
+    for a new layer ("doubles the theme when it returns", "only in the chorus"), add it with the \
+    section_id of one of them and use update_section to list it in the others.
 
     EDIT OPS
     add_layer: name, role, code, gain (default 0.8). With section_id it plays only in that section; \

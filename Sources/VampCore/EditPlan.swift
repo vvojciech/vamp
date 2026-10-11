@@ -50,8 +50,10 @@ public struct EditPlan: Codable, Equatable, Sendable {
         }
 
         /// Applies the edit and reports which layer or section it touched.
+        /// - Parameter existingLayers: the layers the song had before the whole plan. A first section
+        ///   wraps only these as "Main"; nil wraps every current layer.
         @discardableResult
-        public func apply(to song: inout Song) throws -> Change {
+        public func apply(to song: inout Song, existingLayers: [String]? = nil) throws -> Change {
             switch op {
             case .addLayer:
                 guard let code = nonEmpty(code) else { throw EditError.missing("code", op) }
@@ -84,7 +86,7 @@ public struct EditPlan: Codable, Equatable, Sendable {
                 return .removed(id)
             case .addSection:
                 return .sectionAdded(song.addSection(name: nonEmpty(name) ?? "Section", bars: bars,
-                                                     layerIDs: layers, position: position))
+                                                     layerIDs: layers, position: position, wrapping: existingLayers))
             case .updateSection:
                 let index = try existingSection(in: song, id: sectionID)
                 if let name = nonEmpty(name) { song.sections[index].name = name }

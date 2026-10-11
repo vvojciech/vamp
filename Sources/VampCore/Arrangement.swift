@@ -108,9 +108,12 @@ public extension Song {
 
     /// Adds a section. The first one wraps the current loop as "Main", so nothing that plays now is lost.
     @discardableResult
-    mutating func addSection(name: String, bars: Int?, layerIDs: [String]?, position: Int?) -> String {
-        if sections.isEmpty {
-            sections = [Section(id: "main", name: "Main", bars: 8, layerIDs: layers.map(\.id))]
+    /// - Parameter wrapping: the loop layers that become "Main" when this is the first section. Nil
+    ///   means every current layer. Empty means there was no loop, so no Main is created.
+    mutating func addSection(name: String, bars: Int?, layerIDs: [String]?, position: Int?, wrapping: [String]? = nil) -> String {
+        let loop = knownLayers(wrapping ?? layers.map(\.id))
+        if sections.isEmpty && !loop.isEmpty {
+            sections = [Section(id: "main", name: "Main", bars: 8, layerIDs: loop)]
         }
         let id = uniqueSectionID(for: name)
         let section = Section(id: id, name: name, bars: bars ?? 8, layerIDs: knownLayers(layerIDs ?? layers.map(\.id)))

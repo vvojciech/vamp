@@ -53,7 +53,7 @@ public enum AgentSession {
             var changes: [EditPlan.Change] = []
             var errors: [String: String] = [:]
             for edit in plan.edits {
-                do { changes.append(try edit.apply(to: &next)) }
+                do { changes.append(try edit.apply(to: &next, existingLayers: song.layers.map(\.id))) }
                 catch { errors[edit.layerID ?? edit.op.rawValue] = error.localizedDescription }
             }
             let touched = Set(changes.compactMap(\.layerID))

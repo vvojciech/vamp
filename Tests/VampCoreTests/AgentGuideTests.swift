@@ -22,6 +22,14 @@ import Testing
         #expect(AgentPrompt.system.contains("a faster wobble needs higher fast() values"))
     }
 
+    @Test func theGuideLimitsANewLayerToTheSectionsTheRequestNames() {
+        #expect(AgentPrompt.system.contains("When the request names sections for a new layer"))
+    }
+
+    @Test func theGuideSaysAnEmptySongGetsNoMainSection() {
+        #expect(AgentPrompt.system.contains("An empty song gets no Main section"))
+    }
+
     @Test func theGuideSaysWhatToDoWhenTheThingAlreadyExists() {
         #expect(AgentPrompt.system.contains("already exists"))
     }
