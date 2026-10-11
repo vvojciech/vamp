@@ -24,6 +24,15 @@ public extension Song {
     /// Length of the whole arrangement, or nil when the song is one loop.
     var totalBars: Int? { sections.isEmpty ? nil : sections.map(\.bars).reduce(0, +) }
 
+    /// Playing time of the arrangement. One bar is 4 beats: bars × 240 ÷ BPM.
+    var durationSeconds: Double? { totalBars.map { Double($0) * 240 / bpm } }
+
+    /// "3:12".
+    static func clock(_ seconds: Double) -> String {
+        let total = Int(seconds.rounded())
+        return "\(total / 60):\(String(format: "%02d", total % 60))"
+    }
+
     func section(_ id: String) -> Section? { sections.first { $0.id == id } }
 
     /// The code a layer plays in one section, or nil when it rests there.

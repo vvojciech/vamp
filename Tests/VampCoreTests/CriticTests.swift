@@ -37,18 +37,39 @@ private func layer(_ id: String, _ role: LayerRole, code: String = "x", gain: Do
         #expect(card.notes(.form).first?.contains("sections") == true)
     }
 
-    @Test func aContrastingSixtyFourBarFormScoresHigh() {
+    private func radioSong(bpm: Double, chorusBars: Int = 16, firstLayers: [String] = ["c"]) -> Song {
         let ids = ["d", "b", "c", "l"]
         let sections = [
-            Section(id: "intro", name: "Intro", bars: 8, layerIDs: ["c"]),
+            Section(id: "intro", name: "Intro", bars: 8, layerIDs: firstLayers),
             Section(id: "verse", name: "Verse", bars: 16, layerIDs: ["d", "b", "c"]),
-            Section(id: "chorus", name: "Chorus", bars: 16, layerIDs: ids),
+            Section(id: "chorus", name: "Chorus", bars: chorusBars, layerIDs: ids),
             Section(id: "break", name: "Breakdown", bars: 8, layerIDs: ["c", "l"]),
-            Section(id: "chorus2", name: "Chorus 2", bars: 8, layerIDs: ids),
+            Section(id: "chorus2", name: "Chorus 2", bars: chorusBars, layerIDs: ids),
             Section(id: "outro", name: "Outro", bars: 8, layerIDs: ["c"]),
         ]
-        let song = Song(title: "F", bpm: 120, layers: ids.map { layer($0, .lead) }, sections: sections)
+        return Song(title: "F", bpm: bpm, layers: ids.map { layer($0, .lead) }, sections: sections)
+    }
+
+    @Test func aContrastingRadioLengthFormScoresHigh() {
+        let song = radioSong(bpm: 90)  // 72 bars at 90 BPM is 3:12
+        #expect(song.durationSeconds == 192)
         #expect(SongCritic.form(song).score >= 9)
+    }
+
+    @Test func aSongShorterThanThreeMinutesIsNotRadioLength() {
+        let form = SongCritic.form(radioSong(bpm: 120))  // 72 bars at 120 BPM is 2:24
+        #expect(form.score <= 7.5)
+        #expect(form.notes.contains { $0.contains("2:24") && $0.contains("radio") })
+    }
+
+    @Test func aSongLongerThanFourAndAHalfMinutesIsTooLong() {
+        let form = SongCritic.form(radioSong(bpm: 60, chorusBars: 32))  // 104 bars at 60 BPM is 6:56
+        #expect(form.notes.contains { $0.contains("6:56") })
+    }
+
+    @Test func aSongMustStartAndEndThinnerThanItsPeak() {
+        let form = SongCritic.form(radioSong(bpm: 90, firstLayers: ["d", "b", "c", "l"]))
+        #expect(form.notes.contains { $0.contains("Intro") && $0.contains("beginning") })
     }
 
     @Test func identicalNeighbourSectionsArePenalised() {

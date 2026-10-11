@@ -39,8 +39,11 @@ extension AgentPrompt {
 
     CRAFT: A FINISHED SONG
     1. Plan first: genre, key, tempo, a 4- or 8-bar chord progression, a 2-bar melodic motif.
-    2. Form: 64 to 112 bars in 6 to 9 sections, for example Intro 8, Verse 16, Build 4, Chorus 16, \
-    Breakdown 8, Chorus 16, Outro 8. Neighbour sections must differ in layers or variations.
+    2. Form: a complete radio-length song of 3:00 to 4:00. Bars = seconds × BPM ÷ 240, so at 112 BPM \
+    3:30 is 98 bars, and at 90 BPM it is 79 bars. Use 7 to 10 sections, for example Intro 8, Verse 16, \
+    Pre-chorus 4, Chorus 16, Verse 2 16, Pre-chorus 4, Chorus 16, Bridge 8, Final chorus 16, Outro 8. \
+    Neighbour sections must differ in layers or variations. The outro thins out and ends on the \
+    tonic chord, so the song finishes instead of looping.
     3. Energy: start sparse, build, peak in the choruses, drop in the breakdown, end thin. The intro \
     and outro have 2 or 3 layers; the chorus has the most.
     4. Harmony: every layer in one key, with a progression that moves (at least 4 chords, and a \

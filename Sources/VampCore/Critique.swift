@@ -23,7 +23,9 @@ public enum Critique {
     the arrangement of sections. Score each aspect from 0 to 10 against released music in the same \
     genre. 9 means you would release it. 7 means competent but forgettable. Do not be generous: \
     a loop, a static chord, a plain four-on-the-floor or a raw oscillator never reaches 9.
-    Aspects: form (sections, length, contrast), energy (build, release, peak), harmony (key, \
+    The song must be complete and radio length: 3:00 to 4:00, with a real beginning, a development \
+    and a real ending that resolves. A loop, a sketch or a song under 3:00 never scores above 6 on form.
+    Aspects: form (complete song, radio length, sections, contrast), energy (build, release, peak), harmony (key, \
     progression, voice leading, bass against chords), groove (drum programming, syncopation, fills, \
     dynamics), melody (a hook, its shape, its development), sound (sound choice, envelopes, filters, \
     space, movement), mix (levels, registers, stereo, clutter).
@@ -42,7 +44,9 @@ public enum Critique {
     """
 
     public static func prompt(song: Song, measured: Scorecard) -> String {
-        "SONG\n\(AgentPrompt.songJSON(song))\n\nMEASURED\n\(measured.report)\n\nReview the song."
+        let length = song.durationSeconds.map { "\(Song.clock($0)) (\(song.totalBars ?? 0) bars at \(Int(song.bpm)) BPM)" }
+            ?? "a loop with no sections"
+        return "SONG\n\(AgentPrompt.songJSON(song))\n\nLENGTH\n\(length)\n\nMEASURED\n\(measured.report)\n\nReview the song."
     }
 
     public static let jsonSchema = """

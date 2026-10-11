@@ -59,9 +59,19 @@ public enum SongCritic {
             return m
         }
         var m = Measured()
-        if total < 24 { m.penalise(4, "The song is \(total) bars. Make it at least 64 bars (about 2 to 3 minutes).") }
-        else if total < 40 { m.penalise(2, "The song is \(total) bars. Make it at least 64 bars.") }
-        else if total < 56 { m.penalise(1, "The song is \(total) bars. 64 bars or more gives the arrangement room.") }
+        // A complete song for radio runs 3:00 to 4:00.
+        let seconds = song.durationSeconds ?? 0
+        let length = "The song is \(Song.clock(seconds)) (\(total) bars at \(Int(song.bpm)) BPM)."
+        let barsFor3m30 = Int((210 * song.bpm / 240).rounded())
+        if seconds < 150 { m.penalise(3, "\(length) A radio song runs 3:00 to 4:00: about \(barsFor3m30) bars at this tempo.") }
+        else if seconds < 180 { m.penalise(1.5, "\(length) A radio song runs 3:00 to 4:00: about \(barsFor3m30) bars at this tempo.") }
+        else if seconds > 270 { m.penalise(1.5, "\(length) That is long for radio. Aim for 3:00 to 4:00.") }
+        else if seconds > 240 { m.penalise(0.5, "\(length) A little long for radio. Aim for 3:00 to 4:00.") }
+        if let first = song.sections.first, let last = song.sections.last, song.sections.count > 2 {
+            let peak = song.sections.map(\.layerIDs.count).max() ?? 0
+            if first.layerIDs.count >= peak { m.penalise(1, "\(first.name) is as full as the peak. A complete song needs a quieter beginning.") }
+            if last.layerIDs.count >= peak { m.penalise(1, "\(last.name) is as full as the peak. A complete song needs an ending that thins out and resolves.") }
+        }
         if song.sections.count < 4 { m.penalise(3, "Only \(song.sections.count) sections. Use at least 5, with a clear start, a peak and an end.") }
         else if song.sections.count < 5 { m.penalise(1, "Add one more section, such as a breakdown before the last chorus.") }
         for (a, b) in zip(song.sections, song.sections.dropFirst()) where Set(a.layerIDs) == Set(b.layerIDs) && a.variations == b.variations {
