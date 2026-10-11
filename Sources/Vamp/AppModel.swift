@@ -166,7 +166,7 @@ final class AppModel: ObservableObject {
         let tail = 2
         let code = playable.composedCode(codeOverrides: lastGood, tailBars: tail, onlySection: loopedSection?.id)
         guard let code else { engine.stop(); return }
-        engine.stopAtCycle = loopedSection == nil ? song.totalBars.map { Double($0 + tail) } : nil
+        engine.stopAtCycle = song.playbackEnd(tailBars: tail, loopingSection: loopedSection?.id)
         engine.play(code)
     }
 

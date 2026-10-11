@@ -40,6 +40,18 @@ private func song(sections: [Section] = []) -> Song {
         #expect(s.composedCode()?.contains("bd*4") == false)
     }
 
+    @Test func aSongWithSectionsEndsAfterItsBarsAndTheTail() {
+        let s = song(sections: [Section(id: "a", name: "A", bars: 4, layerIDs: ["pad"]),
+                                Section(id: "b", name: "B", bars: 8, layerIDs: ["pad"])])
+        #expect(s.playbackEnd(tailBars: 2, loopingSection: nil) == 14)
+    }
+
+    @Test func aLoopOrALoopedSectionNeverEnds() {
+        let arranged = song(sections: [Section(id: "a", name: "A", bars: 4, layerIDs: ["pad"])])
+        #expect(arranged.playbackEnd(tailBars: 2, loopingSection: "a") == nil)
+        #expect(song().playbackEnd(tailBars: 2, loopingSection: nil) == nil)
+    }
+
     @Test func aTailOfSilenceWrapsTheWholeSong() {
         let s = song(sections: [Section(id: "a", name: "A", bars: 4, layerIDs: ["drums"])])
         let code = s.composedCode(tailBars: 2) ?? ""

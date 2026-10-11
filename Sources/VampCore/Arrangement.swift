@@ -27,6 +27,12 @@ public extension Song {
     /// Playing time of the arrangement. One bar is 4 beats: bars × 240 ÷ BPM.
     var durationSeconds: Double? { totalBars.map { Double($0) * 240 / bpm } }
 
+    /// The cycle where playback stops, or nil when it should loop.
+    func playbackEnd(tailBars: Int, loopingSection: String?) -> Double? {
+        guard loopingSection == nil, let total = totalBars else { return nil }
+        return Double(total + tailBars)
+    }
+
     /// "3:12".
     static func clock(_ seconds: Double) -> String {
         let total = Int(seconds.rounded())
