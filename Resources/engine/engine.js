@@ -107,6 +107,10 @@
           return loadSamplePacks();
         },
       });
+      // Strudel registers its audio worklets (crush, coarse, shape, ...) only on the first mouse-down
+      // in the page. Nobody clicks the hidden web view, so register them now; without them every
+      // note that uses such an effect is dropped.
+      await S.initAudio();
       setKnownSounds(Object.keys(S.soundMap.get()));
       post({ type: 'ready', sounds: knownSounds.size });
       post({ type: 'log', message: `ready with ${knownSounds.size} sounds` });
