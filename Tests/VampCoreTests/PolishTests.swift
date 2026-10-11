@@ -21,6 +21,12 @@ private actor Log {
         #expect(judged.verdict == "Close.")
     }
 
+    @Test func judgeRubricAnchorsTheScaleAndSeparatesProblemsFromPolish() {
+        #expect(Critique.system.contains("9: release-ready"))
+        #expect(Critique.system.contains("\"Problem:\"") && Critique.system.contains("\"Polish:\""))
+        #expect(Critique.system.contains("an aspect with no Problem notes scores 9 or 10"))
+    }
+
     @Test func judgeSchemaListsEveryAspect() throws {
         let object = try JSONSerialization.jsonObject(with: Data(Critique.jsonSchema.utf8)) as? [String: Any]
         let text = String(describing: object)
@@ -100,18 +106,20 @@ private actor Log {
         #expect(text.contains("Do not make these worse: Form"))
     }
 
-    @Test func revisionFocusesOnTheTwoWeakestAspects() {
+    @Test func revisionFixesEveryProblemAndLeavesPolishAsContext() {
         let card = Scorecard(aspects: [
-            .init(name: .mix, score: 6.8, notes: ["Lower the pad."]),
-            .init(name: .sound, score: 7, notes: ["Give the arp its own timbre."]),
-            .init(name: .groove, score: 7.5, notes: ["Vary the hats."]),
-            .init(name: .form, score: 9.2, notes: []),
+            .init(name: .mix, score: 6.8, notes: ["Problem: The pad masks the lead.", "Polish: Pan the hats wider."]),
+            .init(name: .groove, score: 7.5, notes: ["Problem: Verse and chorus drums are the same."]),
+            .init(name: .melody, score: 8, notes: ["The melody spans only 5 semitones."]),  // measured notes have no label
+            .init(name: .form, score: 9.2, notes: ["Polish: Add a crash on the final downbeat."]),
         ])
         let text = Critique.revisionRequest(card: card, goal: 9, verdict: "v")
-        let focus = text.components(separatedBy: "FIX NOW")[1].components(separatedBy: "FOR LATER")[0]
-        #expect(focus.contains("Lower the pad.") && focus.contains("Give the arp its own timbre."))
-        #expect(!focus.contains("Vary the hats."))
-        #expect(text.components(separatedBy: "FOR LATER")[1].contains("Vary the hats."))
+        let fix = text.components(separatedBy: "PROBLEMS TO FIX")[1].components(separatedBy: "OPTIONAL POLISH")[0]
+        #expect(fix.contains("The pad masks the lead.") && fix.contains("Verse and chorus drums are the same."))
+        #expect(fix.contains("The melody spans only 5 semitones."))
+        #expect(!fix.contains("Pan the hats wider."))
+        let polish = text.components(separatedBy: "OPTIONAL POLISH")[1]
+        #expect(polish.contains("Pan the hats wider.") && polish.contains("Add a crash on the final downbeat."))
     }
 }
 

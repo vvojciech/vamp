@@ -37,10 +37,16 @@ public enum Critique {
     only reversed sound is gm_reverse_cymbal, and the only EQ is lpf, hpf and bpf. Only suggest changes \
     Strudel can do.
     The MEASURED scores come from analysis of the actual notes. Never score an aspect higher than \
-    its measured score plus 1. Write notes only for problems a listener would notice, at most 3 per \
-    aspect, most important first. Each note is one concrete change that names the layer or section \
-    and what to write, for example "Chorus 2: give Lead a variation that lifts the motif an octave". \
-    When an aspect has no real problem left, give it 9 or 10 and no notes. Write a one-sentence verdict.
+    its measured score plus 1.
+    SCALE. 10: exceptional, nothing to change. 9: release-ready; anything left is optional polish. \
+    8: good, but at least one problem a listener would notice. 7: competent but forgettable, or one \
+    clear weakness. 6 or lower: several clear weaknesses.
+    NOTES. At most 3 per aspect, most important first. Start each note with "Problem:" when a \
+    listener would notice it and it holds the song back from release, or "Polish:" when it is an \
+    optional improvement to something that already works. Each note names the layer or section and \
+    the change, for example "Problem: Chorus 2 repeats Chorus 1 exactly; give Lead a variation that \
+    lifts the motif an octave". Score from the problems only: an aspect with no Problem notes scores \
+    9 or 10. Write a one-sentence verdict.
     """
 
     public static func prompt(song: Song, measured: Scorecard) -> String {
@@ -60,18 +66,29 @@ public enum Critique {
     """
 
     /// The request the editing agent gets for a revision round.
-    /// Asks for a focused revision: fix the two weakest aspects completely, keep everything else.
-    /// Fixing every note at once tends to add layers and break the mix.
+    /// Asks for a revision that fixes every real problem and treats optional polish as context.
+    /// Acting on every idea at once added layers and broke the mix; problems are about one per aspect.
     public static func revisionRequest(card: Scorecard, goal: Double, verdict: String) -> String {
-        let weakest = card.aspects.filter { $0.score < goal }.sorted { $0.score < $1.score }
-        let now = Scorecard(aspects: Array(weakest.prefix(2)))
-        let later = Scorecard(aspects: Array(weakest.dropFirst(2)))
+        func isPolish(_ note: String) -> Bool { note.hasPrefix("Polish:") }
+        func strip(_ note: String) -> String {
+            for label in ["Problem:", "Polish:"] where note.hasPrefix(label) {
+                return String(note.dropFirst(label.count)).trimmingCharacters(in: .whitespaces)
+            }
+            return note
+        }
+        let ordered = card.aspects.sorted { $0.score < $1.score }
+        let problems = ordered.compactMap { aspect -> String? in
+            let notes = aspect.notes.filter { !isPolish($0) }.map(strip)
+            guard !notes.isEmpty else { return nil }
+            return "\(aspect.name.label) (\(String(format: "%.1f", aspect.score))):\n" + notes.map { "  - \($0)" }.joined(separator: "\n")
+        }
+        let polish = ordered.flatMap { aspect in aspect.notes.filter(isPolish).map { "  - \(aspect.name.label): \(strip($0))" } }
         let strong = card.aspects.filter { $0.score >= goal }.map(\.name.label)
         let protect = strong.isEmpty ? "" : "\nDo not make these worse: \(strong.joined(separator: ", ")).\n"
         return """
-        Revise this song so that the aspects in the first list reach \(String(format: "%.0f", goal)) or more. Fix \
-        them completely, and change nothing that they do not need. The second list is context only: \
-        do not act on it in this round, but do not make those aspects worse.
+        Revise this song so that every aspect reaches \(String(format: "%.0f", goal)) or more. Fix every item in the \
+        problems list below, each one completely, and change nothing that the fixes do not need. The \
+        polish list after it is context: use an item only when it costs nothing elsewhere.
         Improve existing layers and section variations before you add layers. Add a layer only when no \
         existing one can do the job, and then lower or remove another one in that section. Keep at most \
         8 layers in any section and the sum of gains under 4. Give reverb and delay to at most three layers.
@@ -79,11 +96,11 @@ public enum Critique {
         VERDICT
         \(verdict)
 
-        FIX NOW
-        \(now.report)
+        PROBLEMS TO FIX
+        \(problems.isEmpty ? "None." : problems.joined(separator: "\n"))
 
-        FOR LATER
-        \(later.report.isEmpty ? "Nothing." : later.report)
+        OPTIONAL POLISH
+        \(polish.isEmpty ? "None." : polish.joined(separator: "\n"))
         """
     }
 }
