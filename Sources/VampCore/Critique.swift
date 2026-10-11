@@ -91,6 +91,9 @@ public enum Critique {
 /// Runs measure, judge and revise rounds until the song reaches the goal or the rounds run out.
 /// Each revision starts from the best song so far, so a worse revision is discarded, not built on.
 public enum Polisher {
+    /// Measured spread of an averaged review: about half a point per aspect.
+    public static let noiseMargin = 0.5
+
     public struct Assessment: Sendable {
         public var card: Scorecard
         public var verdict: String
@@ -128,8 +131,11 @@ public enum Polisher {
             rounds.append(round)
             await progress(round)
             if round.card.overall >= goal || number > maxRounds { break }
+            // A clear drop goes back to the best song. A difference within the judges' noise
+            // builds on the latest one, so an early lucky score does not anchor every revision.
             let best = Result(rounds: rounds).best
-            current = try await revise(Critique.revisionRequest(card: best.card, goal: goal, verdict: best.verdict), best.song)
+            let base = best.card.overall - round.card.overall <= noiseMargin ? round : best
+            current = try await revise(Critique.revisionRequest(card: base.card, goal: goal, verdict: base.verdict), base.song)
         }
         return Result(rounds: rounds)
     }

@@ -76,6 +76,24 @@ private actor Log {
         #expect(result.best.card.overall == 9.1)
     }
 
+    @Test func aRoundWithinTheNoiseMarginOfTheBestIsBuiltOn() async throws {
+        let counter = Counter()
+        let seen = Log()
+        let scores = [8.0, 7.6, 9.2]
+        _ = try await Polisher.run(
+            song: .starter, goal: 9, maxRounds: 3,
+            revise: { _, song in
+                await seen.add(song.title)
+                var next = song
+                next.title = "v\(await counter.value + 1)"
+                return next
+            },
+            assess: { _ in Polisher.Assessment(card: card(scores[await counter.next()]), verdict: "v") },
+            progress: { _ in })
+        // 7.6 is within 0.5 of 8.0, so the second revision starts from v1, not the original.
+        #expect(await seen.requests == ["Night Drive", "v1"])
+    }
+
     @Test func revisionRequestProtectsStrongAspectsAndCarriesTheVerdict() {
         let text = Critique.revisionRequest(card: card(7), goal: 9, verdict: "Close, but the hook is weak.")
         #expect(text.contains("Close, but the hook is weak."))
