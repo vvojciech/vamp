@@ -23,7 +23,9 @@ public enum SongCritic {
             }
         }
 
-        let melodic = song.layers.filter { [.lead, .arp].contains($0.role) }
+        // The melody is the lead when there is one; an arp is accompaniment unless it is all there is.
+        let leads = song.layers.filter { $0.role == .lead }
+        let melodic = (leads.isEmpty ? song.layers.filter { $0.role == .arp } : leads)
             .max { (events[$0.id]?.count ?? 0) < (events[$1.id]?.count ?? 0) }
 
         return Scorecard(aspects: [

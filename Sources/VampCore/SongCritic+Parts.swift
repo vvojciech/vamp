@@ -107,9 +107,17 @@ extension SongCritic {
         for layer in song.layers where layer.gain > 1.2 {
             m.penalise(1, "\(layer.name) is too loud (\(Int(layer.gain * 100))%). Keep layer volumes at 120% or less.")
         }
-        for (range, ids) in sections {
-            let load = song.layers.filter { ids.contains($0.id) }.map(\.gain).reduce(0, +)
-            if load > 4 { m.penalise(1, "Bars \(range.lowerBound + 1) to \(range.upperBound) stack \(String(format: "%.1f", load)) of gain and may clip. Lower the pads and chords.") }
+        // Layer volume times its average hit volume, so a quiet gain pattern counts as quiet.
+        let overloaded = sections.compactMap { range, ids -> String? in
+            let load = song.layers.filter { ids.contains($0.id) }.map { layer -> Double in
+                let hits = events[layer.id] ?? []
+                let average = hits.isEmpty ? 1 : hits.map(\.gain).reduce(0, +) / Double(hits.count)
+                return layer.gain * min(average, 1.5)
+            }.reduce(0, +)
+            return load > 4 ? "bars \(range.lowerBound + 1)-\(range.upperBound) (\(String(format: "%.1f", load)))" : nil
+        }
+        if !overloaded.isEmpty {
+            m.penalise(1, "Too much total gain may clip in \(overloaded.joined(separator: ", ")). Keep the sum under 4: lower pads, chords and fx first.")
         }
         func median(_ role: LayerRole) -> Double? {
             let pitches = song.layers.filter { $0.role == role }.flatMap { events[$0.id] ?? [] }.compactMap(\.midi).sorted()
