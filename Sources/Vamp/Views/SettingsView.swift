@@ -3,7 +3,7 @@ import VampCore
 
 /// Choose where the agent runs and store the optional API key.
 struct SettingsView: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     @State private var apiKey = Keychain.apiKey ?? ""
     @State private var saved = false
 

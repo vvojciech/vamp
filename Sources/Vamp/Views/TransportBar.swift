@@ -4,7 +4,7 @@ import VampCore
 
 /// Play, title, tempo, view length, undo and export.
 struct TransportBar: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     @State private var copied = false
 
     var body: some View {
@@ -76,7 +76,7 @@ private extension TransportBar {
 }
 
 private struct PlayButton: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
 
     var body: some View {
         let playing = app.engine.isPlaying
@@ -96,7 +96,7 @@ private struct PlayButton: View {
 }
 
 private struct TempoControl: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     @State private var dragStart: Double?
 
     var body: some View {
@@ -127,7 +127,7 @@ private struct TempoControl: View {
 }
 
 private struct EngineStatus: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
 
     var body: some View {
         switch app.engine.status {

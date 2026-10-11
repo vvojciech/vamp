@@ -3,7 +3,7 @@ import VampCore
 
 /// Name, length, order and layers of one section.
 struct SectionInspector: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     let section: Section
 
     private var index: Int { app.song.sections.firstIndex { $0.id == section.id } ?? 0 }
@@ -72,7 +72,7 @@ struct SectionInspector: View {
 }
 
 private struct LayerToggles: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     let section: Section
 
     var body: some View {

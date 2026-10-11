@@ -3,7 +3,7 @@ import VampCore
 
 /// Everything about the selected layer or section, editable by hand. Changes play as soon as the code runs.
 struct InspectorView: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
 
     var body: some View {
         if app.inspectsSection, let id = app.selectedSectionID, let section = app.song.section(id) {
@@ -23,7 +23,7 @@ struct InspectorView: View {
 }
 
 private struct LayerInspector: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     let layer: Layer
     /// Nil edits the code used everywhere. A section id edits that section's own version.
     @State private var scope: String?
@@ -126,7 +126,7 @@ private struct LayerInspector: View {
 
 /// Chooses which version of the code the editor shows: everywhere, or one section's own.
 private struct ScopeBar: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     let layer: Layer
     let sections: [Section]
     @Binding var scope: String?

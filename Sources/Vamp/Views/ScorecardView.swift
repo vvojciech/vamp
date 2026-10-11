@@ -3,7 +3,7 @@ import VampCore
 
 /// Seven aspect scores, live from the notes, with a button that polishes the song to 9+.
 struct ScorecardView: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     @State private var expanded: AspectName?
 
     var body: some View {
@@ -88,7 +88,7 @@ private struct AspectRow: View {
 }
 
 private struct PolishButton: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
 
     var body: some View {
         if app.isPolishing {

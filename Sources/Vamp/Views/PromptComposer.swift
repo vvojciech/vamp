@@ -3,12 +3,11 @@ import VampCore
 
 /// The prompt box, with the backend and model picker beside the send button.
 struct PromptComposer: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     @State private var text = ""
     @FocusState private var focused: Bool
 
     var body: some View {
-        @Bindable var app = app
         VStack(alignment: .leading, spacing: 10) {
             TextField("Describe the change you want to hear…", text: $text, axis: .vertical)
                 .textFieldStyle(.plain)

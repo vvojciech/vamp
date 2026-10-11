@@ -3,7 +3,7 @@ import VampCore
 
 /// Name, role, mute, solo and volume for one layer.
 struct LaneHeader: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     let layer: Layer
     let error: String?
     let eventsPerBar: Int?

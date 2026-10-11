@@ -2,12 +2,12 @@ import SwiftUI
 
 @main
 struct VampApp: App {
-    @State private var app = AppModel()
+    @StateObject private var app = AppModel()
 
     var body: some Scene {
         Window("Vamp", id: "main") {
             ContentView()
-                .environment(app)
+                .environmentObject(app)
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1360, height: 840)
@@ -29,7 +29,7 @@ struct VampApp: App {
 
         Settings {
             SettingsView()
-                .environment(app)
+                .environmentObject(app)
         }
     }
 

@@ -3,7 +3,7 @@ import VampCore
 
 /// The song's sections as blocks along time. Click one to edit it, or loop it while you work.
 struct ArrangementBar: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     /// Playhead in view time.
     let position: Double?
 
@@ -44,7 +44,7 @@ struct ArrangementBar: View {
 }
 
 private struct Blocks: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     let songPosition: Double?
 
     var body: some View {
@@ -71,7 +71,7 @@ private struct Blocks: View {
 }
 
 private struct Block: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     let section: Section
     let index: Int
     let width: CGFloat
@@ -113,7 +113,7 @@ private struct Block: View {
 
 /// Adds a section from a common song part. An intro goes first, everything else last.
 struct AddSectionMenu: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     private let parts: [(String, Int)] = [("Intro", 4), ("Verse", 8), ("Chorus", 8), ("Bridge", 8),
                                           ("Breakdown", 4), ("Build-up", 4), ("Drop", 8), ("Outro", 4)]
 

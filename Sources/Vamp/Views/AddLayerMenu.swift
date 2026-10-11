@@ -3,7 +3,7 @@ import VampCore
 
 /// Starts a new layer from a small template for its role. It plays in every section.
 struct AddLayerMenu: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
 
     static let templates: [(LayerRole, String)] = [
         (.drums, "s(\"bd*4, [~ sd]*2, hh*8\")"),

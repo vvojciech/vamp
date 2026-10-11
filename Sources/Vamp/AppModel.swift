@@ -1,5 +1,5 @@
 import Foundation
-import Observation
+import Combine
 import SwiftUI
 import VampCore
 
@@ -28,39 +28,44 @@ struct RoundNote: Codable, Equatable {
     var weakest: String
 }
 
-@MainActor @Observable
-final class AppModel {
+/// The app's state. An ObservableObject on purpose, not @Observable: Observation keeps
+/// per-thread access lists, and a task that read the model inside a nested run loop corrupted
+/// them twice (EXC_BAD_ACCESS in ObservationTracking._AccessList.addAccess).
+@MainActor
+final class AppModel: ObservableObject {
     let engine = StrudelEngine()
 
-    private(set) var song: Song
-    var selectedLayerID: String? { didSet { if selectedLayerID != nil { inspectsSection = false } } }
-    var selectedSectionID: String? { didSet { if selectedSectionID == nil { loopsSection = false } } }
+    @Published private(set) var song: Song
+    @Published var selectedLayerID: String? { didSet { if selectedLayerID != nil { inspectsSection = false } } }
+    @Published var selectedSectionID: String? { didSet { if selectedSectionID == nil { loopsSection = false } } }
     /// True when the inspector shows the selected section instead of the selected layer.
-    var inspectsSection = false
+    @Published var inspectsSection = false
     /// Play and show only the selected section.
-    var loopsSection = false { didSet { scheduleAnalysis(); if engine.isPlaying { playCurrent() } } }
+    @Published var loopsSection = false { didSet { scheduleAnalysis(); if engine.isPlaying { playCurrent() } } }
     /// View length when the song has no sections.
-    var bars = 4 { didSet { scheduleAnalysis() } }
-    private(set) var analysis: [String: Result<[NoteEvent], LayerError>] = [:]
+    @Published var bars = 4 { didSet { scheduleAnalysis() } }
+    @Published private(set) var analysis: [String: Result<[NoteEvent], LayerError>] = [:]
     /// Live measured scores, or the judged card from the latest polish round.
-    var scorecard: Scorecard?
+    @Published var scorecard: Scorecard?
     /// True while `scorecard` includes the judge's view, until the song changes again.
-    var scorecardJudged = false
-    var chat: [ChatEntry] = []
-    private(set) var undoStack: [Song] = []
-    private(set) var redoStack: [Song] = []
+    @Published var scorecardJudged = false
+    @Published var chat: [ChatEntry] = []
+    @Published private(set) var undoStack: [Song] = []
+    @Published private(set) var redoStack: [Song] = []
 
-    var backend: BackendKind {
+    @Published var backend: BackendKind {
         didSet { UserDefaults.standard.set(backend.rawValue, forKey: "backend"); model = backend.models.first?.id ?? "" }
     }
-    var model: String { didSet { UserDefaults.standard.set(model, forKey: "model.\(backend.rawValue)") } }
+    @Published var model: String { didSet { UserDefaults.standard.set(model, forKey: "model.\(backend.rawValue)") } }
 
     /// Last program per layer that ran, so a typo never silences a layer.
-    @ObservationIgnored private var lastGood: [String: String] = [:]
-    @ObservationIgnored private var analysisTask: Task<Void, Never>?
-    @ObservationIgnored var agentTask: Task<Void, Never>?
-    @ObservationIgnored private var saveTask: Task<Void, Never>?
-    @ObservationIgnored private var lastTypingSnapshot = Date.distantPast
+    private var lastGood: [String: String] = [:]
+    private var analysisTask: Task<Void, Never>?
+    var agentTask: Task<Void, Never>?
+    private var saveTask: Task<Void, Never>?
+    private var lastTypingSnapshot = Date.distantPast
+    /// Views read engine state through the app model, so pass its changes on.
+    private var engineChanges: AnyCancellable?
 
     init() {
         let saved = Persistence.load()
@@ -70,6 +75,7 @@ final class AppModel {
         backend = kind
         model = UserDefaults.standard.string(forKey: "model.\(kind.rawValue)") ?? kind.models.first?.id ?? ""
         selectedLayerID = song.layers.first?.id
+        engineChanges = engine.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
         scheduleAnalysis(delay: 0)
     }
 

@@ -3,7 +3,7 @@ import VampCore
 
 /// The conversation with the agent: what was asked, what changed, what it cost.
 struct AgentPanel: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,7 +47,7 @@ struct AgentPanel: View {
 }
 
 private struct Suggestions: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     private let ideas = ["Compose a full song from this loop: intro, verses, choruses, a breakdown and an outro",
                          "Compose a warm lo-fi song with Rhodes-like piano, vinyl drums and a sax hook",
                          "Add a shuffling hi-hat groove", "Make it darker and slower", "Add a dreamy pad under everything"]
@@ -69,7 +69,7 @@ private struct Suggestions: View {
 }
 
 private struct EntryView: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     let entry: ChatEntry
 
     var body: some View {
@@ -217,7 +217,7 @@ private struct Flow: Layout {
 }
 
 private struct Footer: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     let entry: ChatEntry
 
     var body: some View {

@@ -1,18 +1,18 @@
+import Combine
 import Foundation
-import Observation
 import VampCore
 import WebKit
 
-/// One note or hit, as the score draws it. Times are in cycles (bars).
 /// Hosts Strudel in a hidden web view. Strudel does the sound; Swift does everything visible.
-@MainActor @Observable
-final class StrudelEngine: NSObject, WKScriptMessageHandler {
+/// An ObservableObject for the same reason as AppModel.
+@MainActor
+final class StrudelEngine: NSObject, ObservableObject, WKScriptMessageHandler {
     enum Status: Equatable { case loading, ready, failed(String) }
 
-    private(set) var status: Status = .loading
-    private(set) var isPlaying = false
-    private(set) var lastPlayError: String?
-    @ObservationIgnored let webView: WKWebView
+    @Published private(set) var status: Status = .loading
+    @Published private(set) var isPlaying = false
+    @Published private(set) var lastPlayError: String?
+    let webView: WKWebView
 
     override init() {
         let config = WKWebViewConfiguration()
@@ -56,7 +56,7 @@ final class StrudelEngine: NSObject, WKScriptMessageHandler {
     }
 
     /// Last clock reading from Strudel. The playhead extrapolates from it every frame.
-    @ObservationIgnored private var clock: (cycle: Double, at: Date)?
+    private var clock: (cycle: Double, at: Date)?
 
     /// The playing position in cycles, or nil when stopped.
     func position(at date: Date, bpm: Double) -> Double? {

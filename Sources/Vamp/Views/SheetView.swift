@@ -3,7 +3,7 @@ import VampCore
 
 /// The music sheet: the arrangement, a bar ruler, then one lane per layer, all sharing one playhead.
 struct SheetView: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     static let headerWidth: CGFloat = 214
 
     var body: some View {
@@ -67,7 +67,7 @@ private struct Ruler: View {
 }
 
 private struct LaneView: View {
-    @Environment(AppModel.self) private var app
+    @EnvironmentObject private var app: AppModel
     let layer: Layer
     let position: Double?
 
