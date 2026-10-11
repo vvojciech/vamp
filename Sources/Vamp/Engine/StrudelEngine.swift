@@ -112,7 +112,9 @@ final class StrudelEngine: NSObject, ObservableObject, WKScriptMessageHandler {
                 guard let cycle = body["cycle"] as? Double else { break }
                 clock = (cycle, Date())
                 if let end = stopAtCycle, cycle >= end { stop() }
-            case "fatal": status = .failed(text ?? "The engine did not start.")
+            case "fatal":
+                status = .failed(text ?? "The engine did not start.")
+                FileHandle.standardError.write(Data("[engine] fatal: \(text ?? "")\n".utf8))
             case "playError":
                 lastPlayError = text
                 isPlaying = false

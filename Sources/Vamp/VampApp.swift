@@ -1,13 +1,34 @@
 import SwiftUI
 
+/// Quits cleanly on SIGTERM as well as on ⌘Q: the session is saved and WebKit closes its audio,
+/// instead of the process being cut off with audio streams open.
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    weak var app: AppModel?
+    private var termination: DispatchSourceSignal?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        signal(SIGTERM, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        source.setEventHandler { NSApp.terminate(nil) }
+        source.resume()
+        termination = source
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        MainActor.assumeIsolated { app?.saveNow() }
+    }
+}
+
 @main
 struct VampApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var app = AppModel()
 
     var body: some Scene {
         Window("Vamp", id: "main") {
             ContentView()
                 .environmentObject(app)
+                .onAppear { delegate.app = app }
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1360, height: 840)

@@ -113,6 +113,7 @@
       // silenced reverb.
       await S.loadWorklets();
       setKnownSounds(Object.keys(S.soundMap.get()));
+      idle.onStop();  // nothing plays yet
       post({ type: 'ready', sounds: knownSounds.size });
       post({ type: 'log', message: `ready with ${knownSounds.size} sounds` });
     } catch (error) {
@@ -125,6 +126,32 @@
       post({ type: 'log', message: `Samples did not load from ${pack}: ${error?.message ?? error}` }))));
   }
 
+  // An audio context that runs while nothing plays keeps a live stream open in coreaudiod. Many idle
+  // Vamp windows wedged the audio daemon, so suspend the context once the tail has rung out.
+  // The default timers are wrapped: WebKit refuses setTimeout called with any `this` but window.
+  const windowTimers = { set: (fn, ms) => setTimeout(fn, ms), clear: (id) => clearTimeout(id) };
+
+  function createIdleSuspender(getContext, delayMs, timers = windowTimers) {
+    let pending = null;
+    return {
+      onStop() {
+        if (pending != null) timers.clear(pending);
+        pending = timers.set(async () => {
+          pending = null;
+          const context = getContext();
+          if (context.state === 'running') await context.suspend();
+        }, delayMs);
+      },
+      async onPlay() {
+        if (pending != null) { timers.clear(pending); pending = null; }
+        const context = getContext();
+        if (context.state !== 'running') await context.resume();
+      },
+    };
+  }
+
+  const idle = createIdleSuspender(() => S.getAudioContext(), 3000);
+
   // Strudel creates an orbit on its first note. A kick that ducks orbit 2 before anything has played
   // on orbit 2 gets "duck target orbit 2 does not exist" and is dropped, so create the orbits first.
   function ensureOrbits() {
@@ -134,7 +161,7 @@
 
   async function play(code) {
     try {
-      await S.getAudioContext().resume();
+      await idle.onPlay();
       ensureOrbits();
       await repl.evaluate(code, true);
       post({ type: 'playing' });
@@ -145,6 +172,7 @@
 
   function stop() {
     repl?.stop();
+    idle.onStop();
     post({ type: 'stopped' });
   }
 
@@ -202,5 +230,5 @@
   }, 250);
   clock.unref?.();
 
-  globalThis.vamp = { init, analyze, play, stop, now, level, setKnownSounds, repl: () => repl };
+  globalThis.vamp = { init, analyze, play, stop, now, level, setKnownSounds, createIdleSuspender, repl: () => repl };
 })();

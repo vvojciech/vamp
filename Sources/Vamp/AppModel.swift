@@ -231,7 +231,13 @@ final class AppModel: ObservableObject {
         saveTask = Task {
             try? await Task.sleep(for: .seconds(0.8))
             guard !Task.isCancelled else { return }
-            Persistence.save(.init(song: song, chat: Array(chat.suffix(100))))
+            saveNow()
         }
+    }
+
+    /// Writes the session at once, for example when the app quits before a scheduled save.
+    func saveNow() {
+        saveTask?.cancel()
+        Persistence.save(.init(song: song, chat: Array(chat.suffix(100))))
     }
 }

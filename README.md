@@ -48,6 +48,7 @@ Shortcuts: Space plays and stops, and ← and → jump between sections, when no
 ```bash
 swift test                          # song model, edit plans, backend parsers, agent repair loop
 node --test Tests/engine/*.test.mjs # the Strudel bridge: analysis, chord and sound checks
+scripts/smoke-test.sh               # the real app: the engine starts, plays with sound, suspends when idle
 ```
 
 ## How it fits together

@@ -107,3 +107,25 @@ test('the starter song analyses without errors', () => {
   const results = analyze(starter.layers, 4);
   for (const r of results) assert.equal(r.error, undefined, `${r.id}: ${r.error}`);
 });
+
+test('an idle engine suspends its audio context after the tail, and play resumes it', async () => {
+  const calls = [];
+  const context = { state: 'running', suspend: async () => { calls.push('suspend'); context.state = 'suspended'; },
+                    resume: async () => { calls.push('resume'); context.state = 'running'; } };
+  const timers = [];
+  const fakeTimers = { set: (fn, ms) => { timers.push({ fn, ms }); return timers.length - 1; }, clear: (id) => { timers[id] = null; } };
+  const idle = globalThis.vamp.createIdleSuspender(() => context, 3000, fakeTimers);
+
+  idle.onStop();
+  assert.equal(timers[0].ms, 3000);
+  await timers[0].fn();
+  assert.equal(context.state, 'suspended');
+
+  await idle.onPlay();
+  assert.equal(context.state, 'running');
+
+  idle.onStop();
+  await idle.onPlay();          // playing again within the tail cancels the pending suspend
+  assert.equal(timers[1], null);
+  assert.deepEqual(calls, ['suspend', 'resume']);
+});
