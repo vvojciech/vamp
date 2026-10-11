@@ -64,7 +64,7 @@ VAMP_PLAY=1 VAMP_PROMPT="make it darker" VAMP_SNAPSHOT=/tmp/vamp.png VAMP_SNAPSH
   build/Vamp.app/Contents/MacOS/Vamp
 ```
 
-`VAMP_SESSION=/tmp/test.json` keeps a test run away from your saved session. `VAMP_PROMPTS=/path/prompts.txt` sends each line of a file in order, each after the previous one finishes. `VAMP_QUIT=1` quits once the agent has finished and the session is saved. `VAMP_SELECT` selects a layer by id. The full list is in `Sources/Vamp/DevHooks.swift`.
+`VAMP_SESSION=/tmp/test.json` keeps a test run away from your saved session. `VAMP_PROMPTS=/path/prompts.txt` sends each line of a file in order, each after the previous one finishes. `VAMP_QUIT=1` quits once the agent has finished and the session is saved; `VAMP_DONE_FILE=/path` writes that file instead and keeps the window open. `VAMP_SEEK=bar` moves the play cursor. `VAMP_SELECT` selects a layer by id. The full list is in `Sources/Vamp/DevHooks.swift`.
 
 ## Licence
 

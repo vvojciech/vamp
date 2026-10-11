@@ -10,6 +10,7 @@ import SwiftUI
 ///   VAMP_SEEK=bar          move the play cursor to this bar (before VAMP_PLAY)
 ///   VAMP_SESSION=/s.json   load and save the session here instead of Application Support
 ///   VAMP_QUIT=1            quit once the agent has finished and the session is saved
+///   VAMP_DONE_FILE=/d      write this file at that point instead, and keep the window open
 @MainActor
 enum DevHooks {
     /// One prompt per line. Blank lines and lines that start with # are skipped.
@@ -29,15 +30,17 @@ enum DevHooks {
             queue += prompts(fromFile: file)
         }
         let quit = env["VAMP_QUIT"] == "1"
+        let doneFile = env["VAMP_DONE_FILE"]
         Task {
             // Each prompt waits for the one before, like a musician reading each answer first.
             for prompt in queue {
                 app.send(prompt)
                 while app.isAgentWorking { try? await Task.sleep(for: .seconds(1)) }
             }
-            guard quit else { return }
+            guard quit || doneFile != nil else { return }
             try? await Task.sleep(for: .seconds(2))  // The session save waits 0.8 s after the last change.
-            NSApp.terminate(nil)
+            if let doneFile { FileManager.default.createFile(atPath: doneFile, contents: Data("done\n".utf8)) }
+            if quit { NSApp.terminate(nil) }
         }
         guard let path = env["VAMP_SNAPSHOT"] else { return }
         let delay = Double(env["VAMP_SNAPSHOT_DELAY"] ?? "") ?? 4
