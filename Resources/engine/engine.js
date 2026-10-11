@@ -55,7 +55,8 @@
       if (!e.sound) continue;
       const base = e.sound.split(':')[0];
       const name = e.bank ? `${e.bank}_${base}` : base;
-      if (!knownSounds.has(name)) {
+      // Strudel stores sample names in lower case ("rolandtr909_bd").
+      if (!knownSounds.has(name.toLowerCase())) {
         return e.bank ? `The bank "${e.bank}" has no sound "${base}".` : `Unknown sound "${base}".`;
       }
     }
@@ -92,7 +93,7 @@
   }
 
   function setKnownSounds(names) {
-    knownSounds = names ? new Set(names) : null;
+    knownSounds = names ? new Set(names.map((n) => n.toLowerCase())) : null;
   }
 
   async function init() {

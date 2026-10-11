@@ -68,7 +68,8 @@ test('arranged programs place each section in song time', () => {
 });
 
 test('drum-machine banks are checked by their full sample name', () => {
-  setKnownSounds(['RolandTR909_bd', 'RolandTR909_sd']);
+  // Strudel keeps these names in lower case.
+  setKnownSounds(['rolandtr909_bd', 'rolandtr909_sd']);
   const [good, bad] = analyze([
     { id: 'a', code: 's("bd sd").bank("RolandTR909")' },
     { id: 'b', code: 's("bd cb").bank("RolandTR909")' },
