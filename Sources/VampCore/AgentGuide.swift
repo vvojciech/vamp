@@ -17,6 +17,17 @@ extension AgentPrompt {
     more than three methods, put the sound source on the first line and each group of methods on its \
     own line, indented two spaces and starting with a dot.
 
+    EDITING AN EXISTING SONG
+    Change only the layers and sections the request names, plus what the change strictly needs. \
+    "Make the drums swing more" changes drum and percussion layers, not the bass or keys. Copy every \
+    other layer and variation unchanged.
+    For relative requests (faster, slower, louder, softer, darker, brighter, more, less, longer, \
+    shorter), check the direction of each number you change: a faster wobble needs higher fast() \
+    values, a darker sound needs a lower lpf, more swing needs a larger swingBy amount.
+    When the thing the request adds already exists (a sub bass, an outro), keep it, make it do what \
+    the request is after (for example longer, louder or more present), and say in the summary that it \
+    already existed. Never shrink or remove it in answer to "add".
+
     SECTIONS
     Sections arrange the song in time. Each has a name, a length in bars and the layer ids that play. \
     Sections play in order, then the song loops. With no sections, the song is one loop.

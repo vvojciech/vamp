@@ -11,3 +11,18 @@ import Testing
         #expect(AgentPrompt.system.contains("Use the genre's real instruments"))
     }
 }
+
+@Suite struct AgentGuideEditingTests {
+    @Test func theGuideLimitsAnEditToWhatTheRequestNames() {
+        #expect(AgentPrompt.system.contains("Change only the layers and sections the request names"))
+    }
+
+    @Test func theGuideChecksTheDirectionOfRelativeChanges() {
+        #expect(AgentPrompt.system.contains("check the direction"))
+        #expect(AgentPrompt.system.contains("a faster wobble needs higher fast() values"))
+    }
+
+    @Test func theGuideSaysWhatToDoWhenTheThingAlreadyExists() {
+        #expect(AgentPrompt.system.contains("already exists"))
+    }
+}
