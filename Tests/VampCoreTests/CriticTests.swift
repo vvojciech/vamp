@@ -124,6 +124,15 @@ private func layer(_ id: String, _ role: LayerRole, code: String = "x", gain: Do
         #expect(notes.first?.hasPrefix("kick is quiet") == true)
     }
 
+    @Test func averagedJudgesMeanTheScoresAndKeepDistinctNotes() {
+        let a = Scorecard(aspects: [.init(name: .melody, score: 7, notes: ["Lift the hook.", "Vary bar 4."]), .init(name: .mix, score: 9, notes: [])])
+        let b = Scorecard(aspects: [.init(name: .melody, score: 8, notes: ["Lift the hook.", "Answer the motif."]), .init(name: .mix, score: 8, notes: ["Lower the pad."])])
+        let mean = Scorecard.averaged([a, b])
+        #expect(mean.score(.melody) == 7.5)
+        #expect(mean.score(.mix) == 8.5)
+        #expect(mean.notes(.melody) == ["Lift the hook.", "Vary bar 4.", "Answer the motif."])
+    }
+
     @Test func scorecardOverallIsTheLowestAspect() {
         let card = Scorecard(aspects: [.init(name: .form, score: 9.5, notes: []), .init(name: .mix, score: 7, notes: [])])
         #expect(card.overall == 7)

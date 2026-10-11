@@ -69,16 +69,23 @@ extension AppModel {
         let bars = current.totalBars ?? self.bars
         let events = await analyze(current, cycles: bars).compactMapValues { try? $0.get() }
         let measured = SongCritic.measure(song: current, events: events, bars: bars)
-        let reply = try await Backends.ask(BackendRequest(
-            kind: kind, model: kind.judgeModel, system: Critique.system,
-            user: Critique.prompt(song: current, measured: measured),
-            schema: Critique.jsonSchema, effort: "medium", timeout: 600))
-        let judged = try Critique.decode(reply.json)
+        // Two independent reviews in parallel. One review varies by about half a point per
+        // aspect, and the overall score is the lowest aspect, so a single review chases noise.
+        let request = BackendRequest(kind: kind, model: kind.judgeModel, system: Critique.system,
+                                     user: Critique.prompt(song: current, measured: measured),
+                                     schema: Critique.jsonSchema, effort: "medium", timeout: 600)
+        async let first = Backends.ask(request)
+        async let second = Backends.ask(request)
+        let replies = try await [first, second]
+        let judged = try replies.map { try Critique.decode($0.json) }
         updateLastEntry { entry in
-            entry.tokens += reply.inputTokens + reply.outputTokens
-            if let cost = reply.costUSD, kind == .anthropicAPI { entry.costUSD = (entry.costUSD ?? 0) + cost }
+            for reply in replies {
+                entry.tokens += reply.inputTokens + reply.outputTokens
+                if let cost = reply.costUSD, kind == .anthropicAPI { entry.costUSD = (entry.costUSD ?? 0) + cost }
+            }
         }
-        return Polisher.Assessment(card: measured.combined(with: judged.card), verdict: judged.verdict)
+        let card = Scorecard.averaged(judged.map(\.card))
+        return Polisher.Assessment(card: measured.combined(with: card), verdict: judged[0].verdict)
     }
 
     private func record(_ round: Polisher.Round) {
@@ -100,12 +107,13 @@ extension BackendKind {
         }
     }
 
-    /// The model that judges. A different model from the composer, so it does not grade its own work.
+    /// The model that judges. Opus measured more consistent than Sonnet (about ±0.5 against ±1 per
+    /// aspect on the same song). It sees only the code, and the measured critic caps every aspect.
     var judgeModel: String {
         switch self {
-        case .claudeCLI: "sonnet"
+        case .claudeCLI: "opus"
         case .codexCLI: ""
-        case .anthropicAPI: APIModel.sonnet.rawValue
+        case .anthropicAPI: APIModel.opus.rawValue
         }
     }
 }

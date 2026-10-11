@@ -50,6 +50,19 @@ public struct Scorecard: Codable, Equatable, Sendable {
         })
     }
 
+    /// The mean score per aspect over several judges, which cuts the noise of a single review.
+    /// Notes are merged in order without repeats, at most 4 per aspect.
+    public static func averaged(_ cards: [Scorecard]) -> Scorecard {
+        Scorecard(aspects: AspectName.allCases.compactMap { name in
+            let found = cards.compactMap { $0.aspects.first { $0.name == name } }
+            guard !found.isEmpty else { return nil }
+            var notes: [String] = []
+            for note in found.flatMap(\.notes) where !notes.contains(note) { notes.append(note) }
+            let mean = found.map(\.score).reduce(0, +) / Double(found.count)
+            return Aspect(name: name, score: (mean * 10).rounded() / 10, notes: Array(notes.prefix(4)))
+        })
+    }
+
     /// Plain text for an agent prompt, weakest aspect first.
     public var report: String {
         aspects.sorted { $0.score < $1.score }.map { aspect in

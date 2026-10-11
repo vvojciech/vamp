@@ -15,5 +15,12 @@ import Testing
         let analysis = try JSONDecoder().decode(Analysis.self, from: Data(contentsOf: URL(fileURLWithPath: env["SCORE_EVENTS"]!)))
         let card = SongCritic.measure(song: session.song, events: analysis.events, bars: analysis.bars)
         print("SCORE \(String(format: "%.1f", card.overall))\n\(card.report)")
+        // SCORE_JUDGE_DIR writes the judge's prompt files, for checking how consistent the judge is.
+        if let dir = env["SCORE_JUDGE_DIR"] {
+            let base = URL(fileURLWithPath: dir)
+            try Critique.system.write(to: base.appendingPathComponent("judge-system.txt"), atomically: true, encoding: .utf8)
+            try Critique.prompt(song: session.song, measured: card).write(to: base.appendingPathComponent("judge-user.txt"), atomically: true, encoding: .utf8)
+            try Critique.jsonSchema.write(to: base.appendingPathComponent("judge-schema.json"), atomically: true, encoding: .utf8)
+        }
     }
 }

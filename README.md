@@ -27,7 +27,7 @@ Choose the backend from the menu in the prompt box or in Settings (⌘,).
 | ChatGPT subscription | The `codex` CLI, signed in | Included in your ChatGPT plan |
 | Anthropic API key | A key, stored in the login keychain | Pay per request. The log shows the cost of each prompt. |
 
-Quick edits use the model you choose. The default is Claude Haiku, the cheapest choice. Whole songs and polishing use a stronger composer (Claude Opus) and a different judge (Claude Sonnet), so the model never grades its own work. With Codex, both use your Codex default model. Each request sends only the current song as JSON, a short summary of the last four prompts and the new request. A typical prompt uses about 5k tokens with the Claude CLI. The Codex CLI adds its own agent prompt, so it uses about 25k tokens.
+Quick edits use the model you choose. The default is Claude Haiku, the cheapest choice. Whole songs and polishing use a stronger composer (Claude Opus) and two parallel judges (Claude Opus), so each review runs twice in parallel and the scores are averaged. With Codex, both use your Codex default model. Each request sends only the current song as JSON, a short summary of the last four prompts and the new request. A typical prompt uses about 5k tokens with the Claude CLI. The Codex CLI adds its own agent prompt, so it uses about 25k tokens.
 
 Vamp looks for the CLIs in `/opt/homebrew/bin`, `/usr/local/bin`, `~/.local/bin` and some other common install folders.
 
