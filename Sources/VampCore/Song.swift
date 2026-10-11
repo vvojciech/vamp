@@ -85,7 +85,7 @@ public struct Song: Codable, Equatable, Sendable {
             return code.map { "  (\n\($0)\n  ).postgain(\(String(format: "%.2f", layer.gain)))" }
         }
         guard !parts.isEmpty else { return nil }
-        let tempo = "setcps(\(Int(bpm.rounded()))/60/4)"
+        let tempo = "setcps(\(Int(bpm.rounded()))/60/4);"
         var body = "stack(\n\(parts.joined(separator: ",\n"))\n)"
         if looped == nil, let total = totalBars {
             if tailBars > 0 { body = "arrange(\n[\(total), \(body)],\n[\(tailBars), silence]\n)" }

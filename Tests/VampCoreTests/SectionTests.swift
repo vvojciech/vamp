@@ -55,7 +55,7 @@ private func song(sections: [Section] = []) -> Song {
     @Test func aTailOfSilenceWrapsTheWholeSong() {
         let s = song(sections: [Section(id: "a", name: "A", bars: 4, layerIDs: ["drums"])])
         let code = s.composedCode(tailBars: 2) ?? ""
-        #expect(code.hasPrefix("setcps(100/60/4)\narrange(\n[4, stack("))
+        #expect(code.hasPrefix("setcps(100/60/4);\narrange(\n[4, stack("))
         #expect(code.hasSuffix(")],\n[2, silence]\n)"))
         #expect(s.composedCode(tailBars: 2, onlySection: "a")?.contains("silence]") == false)
     }

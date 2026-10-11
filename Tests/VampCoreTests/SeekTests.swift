@@ -43,6 +43,14 @@ private let song = Song(title: "S", bpm: 120, layers: [
         #expect(song.composedCode(tailBars: 2, startBar: 0)?.contains(".early(") == false)
     }
 
+    /// Without the semicolon, JavaScript reads "setcps(...)\n(" as one call and playback fails.
+    @Test func theTempoStatementEndsWithASemicolon() {
+        for start in [0, 8] {
+            let firstLine = song.composedCode(tailBars: 2, startBar: start)?.components(separatedBy: "\n").first
+            #expect(firstLine == "setcps(120/60/4);")
+        }
+    }
+
     @Test func playbackFromABarEndsAtTheSameSongTime() {
         #expect(song.playbackEnd(tailBars: 2, loopingSection: nil, startBar: 8) == 26)  // 32 + 2 - 8
         #expect(song.playbackEnd(tailBars: 2, loopingSection: nil) == 34)

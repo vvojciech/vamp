@@ -10,7 +10,7 @@ private func layer(_ id: String, _ code: String, gain: Double = 0.8, muted: Bool
         let song = Song(title: "T", bpm: 120, layers: [layer("kick", "s(\"bd*4\")"), layer("hats", "s(\"hh*8\")", gain: 0.5)])
         let code = song.composedCode()
         #expect(code == """
-        setcps(120/60/4)
+        setcps(120/60/4);
         stack(
           (
         s("bd*4")

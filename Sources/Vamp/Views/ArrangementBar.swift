@@ -92,11 +92,15 @@ private struct Block: View {
         .opacity(isDimmed ? 0.4 : 1)
         .clipped()
         .contentShape(Rectangle())
+        .onTapGesture(count: 2) { app.play(fromSection: section.id) }
         .onTapGesture {
             app.selectedSectionID = section.id
             app.inspectsSection = true
+            // While stopped, a click also moves the cursor, so Play starts at this section.
+            if !app.engine.isPlaying, let bar = app.song.startBar(ofSection: section.id) { app.seek(toBar: bar) }
         }
         .contextMenu {
+            Button("Play from here") { app.play(fromSection: section.id) }
             Button("Loop this section") {
                 app.selectedSectionID = section.id
                 app.loopsSection = true
@@ -105,7 +109,7 @@ private struct Block: View {
                 app.update { $0.sections.removeAll { $0.id == section.id } }
             }
         }
-        .help("\(section.name), \(section.bars) bars, \(section.layerIDs.count) layers")
+        .help("\(section.name), \(section.bars) bars, \(section.layerIDs.count) layers. Double-click to play from here.")
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
     }

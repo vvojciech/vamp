@@ -29,16 +29,22 @@ struct ContentView: View {
                 DevHooks.run(app)
             }
         }
-        .onAppear { keyMonitor = Self.installSpaceBar(app) }
+        .onAppear { keyMonitor = Self.installTransportKeys(app) }
         .onDisappear { if let keyMonitor { NSEvent.removeMonitor(keyMonitor) } }
     }
 
-    /// Space plays and stops, unless the musician is typing in a text field.
-    private static func installSpaceBar(_ app: AppModel) -> Any? {
+    /// Space plays and stops; ← and → jump between sections. Not while the musician types.
+    private static func installTransportKeys(_ app: AppModel) -> Any? {
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            guard event.keyCode == 49, event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty,
-                  !(NSApp.keyWindow?.firstResponder is NSText) else { return event }
-            MainActor.assumeIsolated { app.togglePlay() }
+            // Arrow keys carry the numericPad and function flags, so check only real modifiers.
+            let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+            guard modifiers.isEmpty, !(NSApp.keyWindow?.firstResponder is NSText) else { return event }
+            switch event.keyCode {
+            case 49: MainActor.assumeIsolated { app.togglePlay() }
+            case 123: MainActor.assumeIsolated { app.previousSection() }
+            case 124: MainActor.assumeIsolated { app.nextSection() }
+            default: return event
+            }
             return nil
         }
     }

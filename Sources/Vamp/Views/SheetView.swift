@@ -13,7 +13,7 @@ struct SheetView: View {
                     let window = app.window
                     // Loops wrap; a full song plays once, so its playhead hides in the silent tail.
                     let wraps = app.loopsSection || app.song.sections.isEmpty
-                    let position = app.engine.position(at: timeline.date, bpm: app.song.bpm).flatMap { raw -> Double? in
+                    let position = app.songPosition(at: timeline.date).flatMap { raw -> Double? in
                         wraps ? raw.truncatingRemainder(dividingBy: Double(window.count)) : (raw < Double(window.count) ? raw : nil)
                     }
                     VStack(spacing: 6) {
@@ -41,7 +41,9 @@ struct SheetView: View {
     }
 }
 
+/// Bar numbers. In an arranged song, click a bar to play from there; a triangle marks the cursor.
 private struct Ruler: View {
+    @EnvironmentObject private var app: AppModel
     let start: Int
     let bars: Int
     let position: Double?
@@ -51,20 +53,33 @@ private struct Ruler: View {
             Spacer().frame(width: SheetView.headerWidth)
             GeometryReader { geo in
                 let step = max(1, Int((Double(bars) * 34 / max(geo.size.width, 1)).rounded(.up)))
+                let barWidth = geo.size.width / CGFloat(bars)
                 ZStack(alignment: .topLeading) {
+                    Rectangle().fill(Color.white.opacity(0.001))  // the whole strip takes clicks
                     ForEach(Array(stride(from: 0, to: bars, by: step)), id: \.self) { bar in
                         Text("\(start + bar + 1)")
                             .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                             .foregroundStyle(Theme.faint)
-                            .offset(x: geo.size.width / CGFloat(bars) * CGFloat(bar) + 4, y: 3)
+                            .offset(x: barWidth * CGFloat(bar) + 4, y: 3)
+                    }
+                    if app.canSeek && position == nil {
+                        Image(systemName: "arrowtriangle.down.fill")
+                            .font(.system(size: 9)).foregroundStyle(Theme.accent)
+                            .offset(x: barWidth * CGFloat(app.cursorBar - start) - 4.5, y: 4)
+                            .help("Play starts here")
                     }
                     if let position {
                         Capsule().fill(Theme.playhead).frame(width: 9, height: 9)
                             .offset(x: geo.size.width * CGFloat(position / Double(bars)) - 4.5, y: 4)
                     }
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { point in
+                    app.seek(toBar: start + Int(point.x / max(barWidth, 1)))
+                }
             }
             .frame(height: 18)
+            .help(app.canSeek ? "Click a bar to play from there" : "")
         }
     }
 }

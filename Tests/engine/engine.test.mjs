@@ -91,6 +91,18 @@ test('early(n) on an arranged song starts playback at bar n', () => {
   assert.deepEqual(result.events.map((e) => [e.begin, e.midi]), [[0, 52], [1, 52]]);
 });
 
+test('a composed program runs as a whole, the way the REPL evaluates it', () => {
+  const program = readFileSync(new URL('composed-program.js', import.meta.url), 'utf8');
+  let cps = null;
+  globalThis.setcps = (value) => { cps = value; };
+  const { output } = globalThis.strudel.transpiler(program, { wrapAsync: false, addReturn: true });
+  const pattern = new Function(output)();
+  assert.equal(cps, 112 / 60 / 4);
+  // Started at bar 8, the first bar is section B, where the arp plays (it rests in section A).
+  const sounds = new Set(pattern.queryArc(0, 1).map((h) => h.value.s));
+  assert.ok(sounds.has('triangle'), `sounds in bar 1: ${[...sounds]}`);
+});
+
 test('the starter song analyses without errors', () => {
   const results = analyze(starter.layers, 4);
   for (const r of results) assert.equal(r.error, undefined, `${r.id}: ${r.error}`);

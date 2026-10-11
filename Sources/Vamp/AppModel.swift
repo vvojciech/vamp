@@ -36,6 +36,10 @@ final class AppModel: ObservableObject {
     @Published var loopsSection = false { didSet { scheduleAnalysis(); if engine.isPlaying { playCurrent() } } }
     /// View length when the song has no sections.
     @Published var bars = 4 { didSet { scheduleAnalysis() } }
+    /// Where Play starts in an arranged song, in bars. Set by the ruler, the section buttons and ← →.
+    @Published var cursorBar = 0
+    /// The bar the current playback started from. Edits during playback keep it, so the music continues.
+    private(set) var playStartBar = 0
     @Published private(set) var analysis: [String: Result<[NoteEvent], LayerError>] = [:]
     @Published var chat: [ChatEntry] = []
     @Published private(set) var undoStack: [Song] = []
@@ -148,6 +152,13 @@ final class AppModel: ObservableObject {
 
     func togglePlay() {
         if engine.isPlaying { engine.stop(); return }
+        start()
+    }
+
+    /// Starts playback from the cursor. Stops first if needed, because Strudel counts from 0 on each start.
+    func start() {
+        if engine.isPlaying { engine.stop() }
+        playStartBar = song.sections.isEmpty || loopsSection ? 0 : min(cursorBar, max((song.totalBars ?? 1) - 1, 0))
         guard lastGood.isEmpty else { playCurrent(); return }
         // Nothing checked yet (for example just after launch): check first, then play.
         let snapshot = song, range = window
@@ -164,9 +175,10 @@ final class AppModel: ObservableObject {
         }
         // A song with sections plays once, with two silent bars so the ending rings out.
         let tail = 2
-        let code = playable.composedCode(codeOverrides: lastGood, tailBars: tail, onlySection: loopedSection?.id)
+        let code = playable.composedCode(codeOverrides: lastGood, tailBars: tail, startBar: playStartBar,
+                                         onlySection: loopedSection?.id)
         guard let code else { engine.stop(); return }
-        engine.stopAtCycle = song.playbackEnd(tailBars: tail, loopingSection: loopedSection?.id)
+        engine.stopAtCycle = song.playbackEnd(tailBars: tail, loopingSection: loopedSection?.id, startBar: playStartBar)
         engine.play(code)
     }
 

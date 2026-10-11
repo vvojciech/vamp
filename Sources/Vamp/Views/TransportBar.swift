@@ -9,7 +9,21 @@ struct TransportBar: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            PlayButton()
+            HStack(spacing: 6) {
+                if app.canSeek {
+                    Button { app.previousSection() } label: { Image(systemName: "backward.end.fill") }
+                        .help("Start of this section, or the one before (←)")
+                }
+                PlayButton()
+                if app.canSeek {
+                    Button { app.nextSection() } label: { Image(systemName: "forward.end.fill") }
+                        .help("Next section (→)")
+                }
+            }
+            .buttonStyle(.borderless)
+            .font(.system(size: 13))
+
+            if app.canSeek { SongClock() }
 
             TextField("Title", text: Binding(
                 get: { app.song.title },
@@ -72,6 +86,26 @@ private extension TransportBar {
     func songLength(bars: Int) -> String {
         let seconds = Int((Double(bars) * 240 / app.song.bpm).rounded())
         return "\(bars) bars · \(seconds / 60):\(String(format: "%02d", seconds % 60))"
+    }
+}
+
+/// "1:23 / 3:51" and the section under the playhead, or under the cursor when stopped.
+private struct SongClock: View {
+    @EnvironmentObject private var app: AppModel
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.25)) { timeline in
+            let bar = app.songPosition(at: timeline.date) ?? Double(app.cursorBar)
+            let seconds = bar * 240 / app.song.bpm
+            VStack(alignment: .leading, spacing: 1) {
+                Text("\(Song.clock(seconds)) / \(Song.clock(app.song.durationSeconds ?? 0))")
+                    .font(.system(size: 12.5, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Theme.text)
+                Text(app.song.section(atBar: bar)?.name ?? "End")
+                    .font(.system(size: 10.5)).foregroundStyle(Theme.muted).lineLimit(1)
+            }
+            .frame(width: 92, alignment: .leading)
+        }
     }
 }
 
