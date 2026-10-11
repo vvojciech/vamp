@@ -18,6 +18,16 @@ public struct BackendReply: Sendable {
 public enum BackendError: Error, Equatable, LocalizedError {
     case message(String)
     public var errorDescription: String? { if case let .message(text) = self { text } else { nil } }
+
+    /// A dropped connection, a timeout or an overloaded server: worth one more try.
+    /// A usage or session limit is not, because it lasts for hours.
+    public var isTransient: Bool {
+        guard case let .message(text) = self else { return false }
+        let lower = text.lowercased()
+        if lower.contains("limit") { return false }
+        return ["connection refused", "econnrefused", "econnreset", "did not answer in time", "timed out",
+                "overloaded", "529", "network"].contains(where: lower.contains)
+    }
 }
 
 /// Models offered for the Anthropic API backend, with list prices per million tokens.

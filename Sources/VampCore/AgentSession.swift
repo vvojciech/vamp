@@ -32,6 +32,16 @@ public enum AgentSession {
 
     public static let maxAttempts = 2
 
+    /// One more try after a transient failure, such as a dropped connection.
+    static func askWithRetry(_ ask: Ask, _ prompt: String) async throws -> BackendReply {
+        do {
+            return try await ask(AgentPrompt.system, prompt)
+        } catch let error as BackendError where error.isTransient {
+            try await Task.sleep(for: .seconds(1))
+            return try await ask(AgentPrompt.system, prompt)
+        }
+    }
+
     public static func run(request: String, song: Song, history: [Turn], ask: Ask, validate: Validate) async throws -> AgentResult {
         let original = AgentPrompt.user(request: request, song: song, history: history)
         var prompt = original
@@ -40,7 +50,7 @@ public enum AgentSession {
         var lastErrors: [String: String] = [:]
 
         for attempt in 1...maxAttempts {
-            let reply = try await ask(AgentPrompt.system, prompt)
+            let reply = try await askWithRetry(ask, prompt)
             if let replyCost = reply.costUSD { cost = (cost ?? 0) + replyCost }
             tokens.input += reply.inputTokens
             tokens.output += reply.outputTokens

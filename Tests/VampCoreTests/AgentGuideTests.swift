@@ -26,6 +26,14 @@ import Testing
         #expect(AgentPrompt.system.contains("When the request names sections for a new layer"))
     }
 
+    @Test func aRequestAboutTheDrumsCoversEveryDrumLayer() {
+        #expect(AgentPrompt.system.contains("\"The drums\" means every drums and percussion layer"))
+    }
+
+    @Test func aKeyChangeTransposesEveryPitchedLayer() {
+        #expect(AgentPrompt.system.contains("To change the key, transpose every pitched layer"))
+    }
+
     @Test func theGuideSaysAnEmptySongGetsNoMainSection() {
         #expect(AgentPrompt.system.contains("An empty song gets no Main section"))
     }

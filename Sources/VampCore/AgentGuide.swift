@@ -20,7 +20,11 @@ extension AgentPrompt {
     EDITING AN EXISTING SONG
     Change only the layers and sections the request names, plus what the change strictly needs. \
     "Make the drums swing more" changes drum and percussion layers, not the bass or keys. Copy every \
-    other layer and variation unchanged.
+    other layer and variation unchanged. "The drums" means every drums and percussion layer (kick, \
+    snare, hats, cymbals, percussion), including their section variations, not only the first one.
+    To change the key, transpose every pitched layer, melodies and section variations included: \
+    rewrite chords, scales and notes in the new key, or append .transpose(n) with the interval in \
+    semitones. The ending resolves on the new tonic.
     For relative requests (faster, slower, louder, softer, darker, brighter, more, less, longer, \
     shorter), check the direction of each number you change: a faster wobble needs higher fast() \
     values, a darker sound needs a lower lpf, more swing needs a larger swingBy amount.

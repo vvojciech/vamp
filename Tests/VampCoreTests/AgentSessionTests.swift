@@ -87,3 +87,50 @@ private actor Script {
         #expect(prompt.hasSuffix("darker"))
     }
 }
+
+private actor Flaky {
+    var calls = 0
+    let failures: [Error]
+    init(_ failures: [Error]) { self.failures = failures }
+    func next() throws -> BackendReply {
+        calls += 1
+        if calls <= failures.count { throw failures[calls - 1] }
+        return reply(#"{"plan":"p","summary":"ok","edits":[]}"#)
+    }
+}
+
+@Suite struct AgentRetryTests {
+    @Test func aDroppedConnectionIsRetriedOnce() async throws {
+        let flaky = Flaky([BackendError.message("API Error: Connection refused (ECONNREFUSED)")])
+        let result = try await AgentSession.run(request: "x", song: song, history: [],
+                                                ask: { _, _ in try await flaky.next() }, validate: { _ in [:] })
+        #expect(result.summary == "ok")
+        #expect(await flaky.calls == 2)
+    }
+
+    @Test func aTimeoutIsRetriedOnce() async throws {
+        let flaky = Flaky([BackendError.message("claude did not answer in time.")])
+        _ = try await AgentSession.run(request: "x", song: song, history: [],
+                                       ask: { _, _ in try await flaky.next() }, validate: { _ in [:] })
+        #expect(await flaky.calls == 2)
+    }
+
+    @Test func aUsageLimitIsNotRetried() async {
+        let flaky = Flaky([BackendError.message("You've hit your session limit · resets 12:50pm")])
+        await #expect(throws: BackendError.self) {
+            _ = try await AgentSession.run(request: "x", song: song, history: [],
+                                           ask: { _, _ in try await flaky.next() }, validate: { _ in [:] })
+        }
+        #expect(await flaky.calls == 1)
+    }
+
+    @Test func twoTransientFailuresInARowAreReported() async {
+        let refused = BackendError.message("Connection refused")
+        let flaky = Flaky([refused, refused])
+        await #expect(throws: BackendError.self) {
+            _ = try await AgentSession.run(request: "x", song: song, history: [],
+                                           ask: { _, _ in try await flaky.next() }, validate: { _ in [:] })
+        }
+        #expect(await flaky.calls == 2)
+    }
+}
