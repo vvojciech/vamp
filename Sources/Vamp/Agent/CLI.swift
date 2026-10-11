@@ -44,57 +44,14 @@ enum CLI {
         guard let executable = locate(tool) else {
             throw BackendError.message("Vamp cannot find the \(tool) CLI. Install it and sign in, then try again.")
         }
-        let process = Process()
-        process.executableURL = executable
-        process.arguments = arguments
-        process.currentDirectoryURL = try scratchDirectory()
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = searchPath
-        process.environment = env
-        let out = Pipe(), err = Pipe()
-        process.standardOutput = out
-        process.standardError = err
-        process.standardInput = FileHandle.nullDevice
-
-        return try await withTaskCancellationHandler {
-            try await withCheckedThrowingContinuation { continuation in
-                let stdout = PipeReader(out.fileHandleForReading)
-                let stderr = PipeReader(err.fileHandleForReading)
-                process.terminationHandler = { finished in
-                    let output = Output(stdout: stdout.wait(), stderr: stderr.wait(), status: finished.terminationStatus)
-                    if finished.terminationReason == .uncaughtSignal {
-                        continuation.resume(throwing: CancellationError())
-                    } else {
-                        continuation.resume(returning: output)
-                    }
-                }
-                do { try process.run() } catch { continuation.resume(throwing: error); return }
-                DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
-                    if process.isRunning { process.terminate() }
-                }
-            }
-        } onCancel: {
-            if process.isRunning { process.terminate() }
+        do {
+            let output = try await CommandRunner.run(executable, arguments, directory: try scratchDirectory(),
+                                                     environment: env, timeout: timeout)
+            return Output(stdout: output.stdout, stderr: output.stderr, status: output.status)
+        } catch let timeout as CommandRunner.Timeout {
+            throw BackendError.message("\(tool) did not answer in time. \(timeout.localizedDescription)")
         }
-    }
-}
-
-/// Drains a pipe on its own thread until the tool closes it, so a chatty tool never blocks
-/// on a full buffer. Exactly one thread reads the handle: FileHandle is not thread-safe.
-private final class PipeReader: @unchecked Sendable {
-    private var data = Data()
-    private let done = DispatchSemaphore(value: 0)
-
-    init(_ handle: FileHandle) {
-        DispatchQueue.global(qos: .userInitiated).async { [self] in
-            data = handle.readDataToEndOfFile()
-            done.signal()
-        }
-    }
-
-    /// Blocks until the pipe reaches its end. The semaphore also publishes `data` to the caller.
-    func wait() -> Data {
-        done.wait()
-        return data
     }
 }
