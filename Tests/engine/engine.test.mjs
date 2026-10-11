@@ -67,6 +67,17 @@ test('arranged programs place each section in song time', () => {
   assert.deepEqual(result.events.map((e) => [e.begin, e.midi]), [[2, 48], [3, 55]]);
 });
 
+test('drum-machine banks are checked by their full sample name', () => {
+  setKnownSounds(['RolandTR909_bd', 'RolandTR909_sd']);
+  const [good, bad] = analyze([
+    { id: 'a', code: 's("bd sd").bank("RolandTR909")' },
+    { id: 'b', code: 's("bd cb").bank("RolandTR909")' },
+  ], 1);
+  setKnownSounds(null);
+  assert.ok(good.events);
+  assert.equal(bad.error, 'The bank "RolandTR909" has no sound "cb".');
+});
+
 test('the starter song analyses without errors', () => {
   const results = analyze(starter.layers, 4);
   for (const r of results) assert.equal(r.error, undefined, `${r.id}: ${r.error}`);

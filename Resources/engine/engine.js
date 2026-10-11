@@ -3,7 +3,17 @@
 (() => {
   const S = globalThis.strudel;
   const post = (message) => globalThis.webkit?.messageHandlers?.vamp?.postMessage(message);
-  const MAX_EVENTS = 1500;
+  // Enough for 16th-note hats across a 96-bar song.
+  const MAX_EVENTS = 6000;
+  const PACKS = 'https://raw.githubusercontent.com/felixroos/dough-samples/main';
+  const SAMPLE_PACKS = [
+    'github:tidalcycles/dirt-samples',
+    `${PACKS}/tidal-drum-machines.json`,
+    `${PACKS}/piano.json`,
+    `${PACKS}/vcsl.json`,
+    `${PACKS}/EmuSP12.json`,
+    `${PACKS}/mridangam.json`,
+  ];
   let repl = null;
   let knownSounds = null;
 
@@ -33,6 +43,8 @@
       end: hap.whole.end.valueOf(),
       midi: midi == null || Number.isNaN(midi) ? null : Math.round(midi * 100) / 100,
       sound,
+      // A drum-machine bank turns s("bd").bank("RolandTR909") into the sample "RolandTR909_bd".
+      bank: obj.bank != null ? String(obj.bank) : null,
       gain: typeof obj.gain === 'number' ? obj.gain : 1,
     };
   }
@@ -41,8 +53,11 @@
     if (!knownSounds) return null;
     for (const e of events) {
       if (!e.sound) continue;
-      const name = e.sound.split(':')[0];
-      if (!knownSounds.has(name)) return `Unknown sound "${name}".`;
+      const base = e.sound.split(':')[0];
+      const name = e.bank ? `${e.bank}_${base}` : base;
+      if (!knownSounds.has(name)) {
+        return e.bank ? `The bank "${e.bank}" has no sound "${base}".` : `Unknown sound "${base}".`;
+      }
     }
     return null;
   }
@@ -83,9 +98,10 @@
   async function init() {
     try {
       repl = await S.initStrudel({
-        // Offline, the synths still work; sample layers then report an unknown sound.
-        prebake: () => S.samples('github:tidalcycles/dirt-samples').catch((error) =>
-          post({ type: 'log', message: `Samples did not load: ${error?.message ?? error}` })),
+        // The same packs strudel.cc loads. Offline, the synths still work and
+        // sample layers report an unknown sound.
+        prebake: () => Promise.all(SAMPLE_PACKS.map((pack) => S.samples(pack).catch((error) =>
+          post({ type: 'log', message: `Samples did not load from ${pack}: ${error?.message ?? error}` })))),
       });
       setKnownSounds(Object.keys(S.soundMap.get()));
       post({ type: 'ready', sounds: knownSounds.size });
