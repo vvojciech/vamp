@@ -79,6 +79,12 @@ test('drum-machine banks are checked by their full sample name', () => {
   assert.equal(bad.error, 'The bank "RolandTR909" has no sound "cb".');
 });
 
+test('a song wrapped with a silent tail plays nothing in the tail', () => {
+  const code = 'arrange(\n[4, stack(\n  (\narrange(\n  [4, (\nnote("c3")\n  )]\n)\n  ).postgain(0.80)\n)],\n[2, silence]\n)';
+  const [result] = analyze([{ id: 'song', code }], 6);
+  assert.deepEqual(result.events.map((e) => e.begin), [0, 1, 2, 3]);
+});
+
 test('the starter song analyses without errors', () => {
   const results = analyze(starter.layers, 4);
   for (const r of results) assert.equal(r.error, undefined, `${r.id}: ${r.error}`);

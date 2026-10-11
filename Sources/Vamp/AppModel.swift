@@ -174,8 +174,11 @@ final class AppModel: ObservableObject {
         for i in playable.layers.indices where lastGood[playable.layers[i].id] == nil {
             playable.layers[i].muted = true
         }
-        let code = playable.composedCode(codeOverrides: lastGood, onlySection: loopedSection?.id)
+        // A song with sections plays once, with two silent bars so the ending rings out.
+        let tail = 2
+        let code = playable.composedCode(codeOverrides: lastGood, tailBars: tail, onlySection: loopedSection?.id)
         guard let code else { engine.stop(); return }
+        engine.stopAtCycle = loopedSection == nil ? song.totalBars.map { Double($0 + tail) } : nil
         engine.play(code)
     }
 

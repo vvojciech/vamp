@@ -69,8 +69,10 @@ public struct Song: Codable, Equatable, Sendable {
     /// The full Strudel program. One cycle is one bar of four beats.
     /// - Parameters:
     ///   - codeOverrides: a program to use in place of a layer's own, for example its last valid version.
+    ///   - tailBars: bars of silence after the whole song, so reverb and delay ring out before it
+    ///     starts over. Ignored for a loop or a looped section.
     ///   - onlySection: play just this section as a loop.
-    public func composedCode(codeOverrides: [String: String] = [:], onlySection: String? = nil) -> String? {
+    public func composedCode(codeOverrides: [String: String] = [:], tailBars: Int = 0, onlySection: String? = nil) -> String? {
         let looped = onlySection.flatMap(section)
         let parts = audibleLayers.compactMap { layer -> String? in
             let code: String?
@@ -82,7 +84,12 @@ public struct Song: Codable, Equatable, Sendable {
             return code.map { "  (\n\($0)\n  ).postgain(\(String(format: "%.2f", layer.gain)))" }
         }
         guard !parts.isEmpty else { return nil }
-        return "setcps(\(Int(bpm.rounded()))/60/4)\nstack(\n\(parts.joined(separator: ",\n"))\n)"
+        let tempo = "setcps(\(Int(bpm.rounded()))/60/4)"
+        let stack = "stack(\n\(parts.joined(separator: ",\n"))\n)"
+        if tailBars > 0, looped == nil, let total = totalBars {
+            return "\(tempo)\narrange(\n[\(total), \(stack)],\n[\(tailBars), silence]\n)"
+        }
+        return "\(tempo)\n\(stack)"
     }
 
     public func index(of id: String) -> Int? { layers.firstIndex { $0.id == id } }

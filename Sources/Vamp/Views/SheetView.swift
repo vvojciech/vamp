@@ -11,8 +11,11 @@ struct SheetView: View {
             ScrollView(.vertical) {
                 TimelineView(.animation(paused: !app.engine.isPlaying)) { timeline in
                     let window = app.window
-                    let position = app.engine.position(at: timeline.date, bpm: app.song.bpm)
-                        .map { $0.truncatingRemainder(dividingBy: Double(window.count)) }
+                    // Loops wrap; a full song plays once, so its playhead hides in the silent tail.
+                    let wraps = app.loopsSection || app.song.sections.isEmpty
+                    let position = app.engine.position(at: timeline.date, bpm: app.song.bpm).flatMap { raw -> Double? in
+                        wraps ? raw.truncatingRemainder(dividingBy: Double(window.count)) : (raw < Double(window.count) ? raw : nil)
+                    }
                     VStack(spacing: 6) {
                         ArrangementBar(position: position)
                         Ruler(start: window.start, bars: window.count, position: position)

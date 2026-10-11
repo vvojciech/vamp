@@ -57,6 +57,8 @@ final class StrudelEngine: NSObject, ObservableObject, WKScriptMessageHandler {
 
     /// Last clock reading from Strudel. The playhead extrapolates from it every frame.
     private var clock: (cycle: Double, at: Date)?
+    /// Playback stops when the clock passes this cycle, so a finished song ends instead of looping.
+    var stopAtCycle: Double?
 
     /// The playing position in cycles, or nil when stopped.
     func position(at date: Date, bpm: Double) -> Double? {
@@ -70,7 +72,10 @@ final class StrudelEngine: NSObject, ObservableObject, WKScriptMessageHandler {
         MainActor.assumeIsolated {
             switch type {
             case "ready": status = .ready
-            case "time": if let cycle = body["cycle"] as? Double { clock = (cycle, Date()) }
+            case "time":
+                guard let cycle = body["cycle"] as? Double else { break }
+                clock = (cycle, Date())
+                if let end = stopAtCycle, cycle >= end { stop() }
             case "fatal": status = .failed(text ?? "The engine did not start.")
             case "playError": lastPlayError = text; isPlaying = false
             case "stopped": isPlaying = false; clock = nil
