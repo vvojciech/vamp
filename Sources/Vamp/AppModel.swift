@@ -156,8 +156,9 @@ final class AppModel {
         if engine.isPlaying { engine.stop(); return }
         guard lastGood.isEmpty else { playCurrent(); return }
         // Nothing checked yet (for example just after launch): check first, then play.
+        let snapshot = song, range = window
         Task {
-            record(await analyze(song, cycles: window.start + window.count))
+            record(await analyze(snapshot, cycles: range.start + range.count), of: snapshot)
             playCurrent()
         }
     }
@@ -187,24 +188,29 @@ final class AppModel {
         return await engine.analyze(programs, cycles: max(cycles, 1))
     }
 
-    private func record(_ result: [String: Result<[NoteEvent], LayerError>]) {
+    /// Remembers which programs ran, taken from the song that was analysed, not a later one.
+    private func record(_ result: [String: Result<[NoteEvent], LayerError>], of analysed: Song) {
         for (id, value) in result {
-            guard case .success = value, let layer = song.layers.first(where: { $0.id == id }) else { continue }
-            lastGood[id] = song.program(for: layer)
+            guard case .success = value, let layer = analysed.layers.first(where: { $0.id == id }) else { continue }
+            lastGood[id] = analysed.program(for: layer)
         }
     }
 
     private func scheduleAnalysis(delay: Double = 0) {
         analysisTask?.cancel()
-        analysisTask = Task {
+        // Take a snapshot now; the task never reads the observable model after a suspension.
+        let snapshot = song
+        let range = window
+        let measureScore = !loopsSection && !isPolishing
+        analysisTask = Task { [engine] in
             if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
             guard !Task.isCancelled, engine.status == .ready else { return }
-            let result = await analyze(song, cycles: window.start + window.count)
+            let result = await analyze(snapshot, cycles: range.start + range.count)
             guard !Task.isCancelled else { return }
             analysis = result
-            record(result)
-            if !loopsSection && !isPolishing {
-                scorecard = SongCritic.measure(song: song, events: result.compactMapValues { try? $0.get() }, bars: window.count)
+            record(result, of: snapshot)
+            if measureScore {
+                scorecard = SongCritic.measure(song: snapshot, events: result.compactMapValues { try? $0.get() }, bars: range.count)
                 scorecardJudged = false
             }
             if engine.isPlaying { playCurrent() }

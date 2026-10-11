@@ -58,10 +58,10 @@ enum CLI {
 
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
-                let stdout = Collector(out.fileHandleForReading)
-                let stderr = Collector(err.fileHandleForReading)
+                let stdout = PipeReader(out.fileHandleForReading)
+                let stderr = PipeReader(err.fileHandleForReading)
                 process.terminationHandler = { finished in
-                    let output = Output(stdout: stdout.finish(), stderr: stderr.finish(), status: finished.terminationStatus)
+                    let output = Output(stdout: stdout.wait(), stderr: stderr.wait(), status: finished.terminationStatus)
                     if finished.terminationReason == .uncaughtSignal {
                         continuation.resume(throwing: CancellationError())
                     } else {
@@ -79,24 +79,22 @@ enum CLI {
     }
 }
 
-/// Drains a pipe as it fills, so a chatty tool never blocks on a full buffer.
-private final class Collector: @unchecked Sendable {
+/// Drains a pipe on its own thread until the tool closes it, so a chatty tool never blocks
+/// on a full buffer. Exactly one thread reads the handle: FileHandle is not thread-safe.
+private final class PipeReader: @unchecked Sendable {
     private var data = Data()
-    private let lock = NSLock()
-    private let handle: FileHandle
+    private let done = DispatchSemaphore(value: 0)
 
     init(_ handle: FileHandle) {
-        self.handle = handle
-        handle.readabilityHandler = { [weak self] h in
-            let chunk = h.availableData
-            guard let self, !chunk.isEmpty else { return }
-            self.lock.withLock { self.data.append(chunk) }
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
+            data = handle.readDataToEndOfFile()
+            done.signal()
         }
     }
 
-    func finish() -> Data {
-        handle.readabilityHandler = nil
-        let rest = handle.readDataToEndOfFile()
-        return lock.withLock { data + rest }
+    /// Blocks until the pipe reaches its end. The semaphore also publishes `data` to the caller.
+    func wait() -> Data {
+        done.wait()
+        return data
     }
 }
