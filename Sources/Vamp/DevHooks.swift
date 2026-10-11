@@ -8,6 +8,7 @@ import SwiftUI
 ///   VAMP_SNAPSHOT=/a.png   render the window to a PNG (after VAMP_SNAPSHOT_DELAY seconds, default 4)
 ///   VAMP_SELECT=layer-id   select this layer before the snapshot
 ///   VAMP_SEEK=bar          move the play cursor to this bar (before VAMP_PLAY)
+///   VAMP_LEVELS=1          write the audio output level to stderr twice a second
 ///   VAMP_SESSION=/s.json   load and save the session here instead of Application Support
 ///   VAMP_QUIT=1            quit once the agent has finished and the session is saved
 ///   VAMP_DONE_FILE=/d      write this file at that point instead, and keep the window open
@@ -24,6 +25,15 @@ enum DevHooks {
         let env = ProcessInfo.processInfo.environment
         if let id = env["VAMP_SELECT"] { app.selectedLayerID = id }
         if let bar = env["VAMP_SEEK"].flatMap(Int.init) { app.seek(toBar: bar) }
+        if env["VAMP_LEVELS"] == "1" {
+            Task {
+                while true {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    let level = await app.engine.level()
+                    FileHandle.standardError.write(Data(String(format: "[level] peak %.4f rms %.4f\n", level.peak, level.rms).utf8))
+                }
+            }
+        }
         if env["VAMP_PLAY"] == "1" { app.togglePlay() }
         var queue = env["VAMP_PROMPT"].map { [$0] } ?? []
         if let path = env["VAMP_PROMPTS"], let file = try? String(contentsOfFile: path, encoding: .utf8) {

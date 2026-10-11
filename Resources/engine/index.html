@@ -5,14 +5,31 @@
 <script>
   window.addEventListener('error', (e) => window.webkit?.messageHandlers?.vamp?.postMessage({ type: 'log', message: String(e.message) }));
   window.addEventListener('unhandledrejection', (e) => window.webkit?.messageHandlers?.vamp?.postMessage({ type: 'log', message: String(e.reason?.message ?? e.reason) }));
-  // Strudel reports missing sounds and load failures as console warnings; pass them to the app log.
-  for (const level of ['warn', 'error']) {
+  // Strudel reports missing sounds and load failures as console warnings, and some errors through
+  // its logger (console.log); pass them to the app log.
+  for (const level of ['warn', 'error', 'log']) {
     const original = console[level].bind(console);
     console[level] = (...args) => {
-      window.webkit?.messageHandlers?.vamp?.postMessage({ type: 'log', message: `${level}: ${args.map(String).join(' ')}` });
+      const text = args.map(String).join(' ').replace(/%c/g, '');
+      if (level !== 'log' || /error|not found|failed|cannot|warn/i.test(text)) {
+        window.webkit?.messageHandlers?.vamp?.postMessage({ type: 'log', message: `${level}: ${text}` });
+      }
       original(...args);
     };
   }
+  // Tap everything that reaches the speakers into one analyser, so the app can measure the level.
+  const connect = AudioNode.prototype.connect;
+  AudioNode.prototype.connect = function (target, ...rest) {
+    if (target instanceof AudioDestinationNode) {
+      if (!window.vampAnalyser || window.vampAnalyser.context !== target.context) {
+        window.vampAnalyser = target.context.createAnalyser();
+        window.vampAnalyser.fftSize = 2048;
+      }
+      connect.call(this, window.vampAnalyser);
+    }
+    return connect.call(this, target, ...rest);
+  };
+
 </script>
 <script src="strudel.js"></script>
 <script src="soundfonts.js"></script>

@@ -66,6 +66,13 @@ final class StrudelEngine: NSObject, ObservableObject, WKScriptMessageHandler {
         return clock.cycle + date.timeIntervalSince(clock.at) * bpm / 240
     }
 
+    /// Peak and RMS of the audio output right now, 0 to 1.
+    func level() async -> (peak: Double, rms: Double) {
+        let raw = try? await webView.callAsyncJavaScript("return window.vamp.level()", arguments: [:], contentWorld: .page)
+        let values = raw as? [String: Any]
+        return ((values?["peak"] as? Double) ?? 0, (values?["rms"] as? Double) ?? 0)
+    }
+
     nonisolated func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
         let text = body["message"] as? String

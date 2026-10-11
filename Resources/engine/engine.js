@@ -135,6 +135,17 @@
     post({ type: 'stopped' });
   }
 
+  /// Peak and RMS of what is playing now, 0 to 1. Zero means silence.
+  function level() {
+    const analyser = globalThis.vampAnalyser;
+    if (!analyser) return { peak: 0, rms: 0 };
+    const samples = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(samples);
+    let peak = 0, sum = 0;
+    for (const s of samples) { peak = Math.max(peak, Math.abs(s)); sum += s * s; }
+    return { peak, rms: Math.sqrt(sum / samples.length) };
+  }
+
   function now() {
     return repl?.scheduler?.started ? repl.scheduler.now() : null;
   }
@@ -146,5 +157,5 @@
   }, 250);
   clock.unref?.();
 
-  globalThis.vamp = { init, analyze, play, stop, now, setKnownSounds };
+  globalThis.vamp = { init, analyze, play, stop, now, level, setKnownSounds };
 })();
