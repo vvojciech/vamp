@@ -8,6 +8,7 @@ let package = Package(
         .target(name: "VampCore"),
         .executableTarget(name: "Vamp", dependencies: ["VampCore"]),
         .testTarget(name: "VampCoreTests", dependencies: ["VampCore"]),
+        .testTarget(name: "VampTests", dependencies: ["Vamp"]),
     ],
     swiftLanguageModes: [.v5]
 )

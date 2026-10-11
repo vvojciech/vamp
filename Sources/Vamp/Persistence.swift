@@ -17,7 +17,12 @@ enum Persistence {
 
     static func load() -> Snapshot? {
         guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(Snapshot.self, from: data)
+        return decode(data)
+    }
+
+    /// Unknown keys from older versions are ignored; a damaged file gives nil, never a crash.
+    static func decode(_ data: Data) -> Snapshot? {
+        try? JSONDecoder().decode(Snapshot.self, from: data)
     }
 
     static func save(_ snapshot: Snapshot) {

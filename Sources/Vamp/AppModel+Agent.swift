@@ -55,7 +55,7 @@ extension AppModel {
     /// A request for a whole song gets more thinking than a quick tweak.
     nonisolated static func isBigRequest(_ text: String) -> Bool {
         let lower = text.lowercased()
-        return ["compose", "write a song", "full song", "whole song", "new song", "arrange", "critique"].contains(where: lower.contains)
+        return ["compose", "write a song", "full song", "whole song", "new song", "arrange"].contains(where: lower.contains)
     }
 
     /// Puts the song back to how it was before this prompt.
