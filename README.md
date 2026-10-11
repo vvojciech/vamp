@@ -11,7 +11,8 @@ Vamp is a macOS app that makes music from prompts. You describe a change in plai
 - **Code.** Select a layer to see its [Strudel](https://strudel.cc) code. Edits play as soon as the code runs. If the code breaks, the last working version keeps playing, and the error shows under the editor.
 - **Sections.** A song can have sections, such as Intro, Verse, Chorus, Breakdown and Outro. Each section has a length in bars and its own set of layers. A layer can also have different code in one section. The strip above the lanes shows the arrangement. Click a section to edit it, or turn on Loop to play and show only that section.
 - **Agent.** Type a request such as "add a shuffling hi-hat groove". The agent returns only the edits it needs: add, change or remove a layer or section, or set the tempo. Vamp checks the new code before it plays. If the code fails, Vamp sends the errors back once for a fix. A request for a whole song ("compose…") uses the composer model with more thinking time.
-- **Sounds.** Vamp loads the sample packs strudel.cc uses: 71 classic drum machines (TR-808, TR-909, LinnDrum and more), a Steinway piano, 128 orchestral and world instruments, and the Dirt samples, plus Strudel's synths.
+- **Sounds.** Vamp loads the sample packs strudel.cc uses: 71 classic drum machines (TR-808, TR-909, LinnDrum and more), a Steinway piano, 128 orchestral and world instruments, and the Dirt samples, plus Strudel's synths and 125 General MIDI soundfont instruments (strings, brass, guitars, electric pianos, choirs, pads).
+- **Transport.** A song with sections plays once and stops after its ending. Click a bar in the ruler to play from there, double-click a section to play it, or use the previous and next section buttons (← →). The clock shows the time and the current section.
 - **Undo.** Every agent change has its own Undo button. ⌘Z and ⇧⌘Z move through all versions of the song.
 - **Export.** "Copy code" copies the whole song as one Strudel program that runs on strudel.cc.
 
@@ -40,7 +41,7 @@ open build/Vamp.app
 
 The first start downloads the drum and instrument samples from the [Dirt-Samples](https://github.com/tidalcycles/Dirt-Samples) repository. Without a network, the synths still play, but sample layers show an "Unknown sound" error.
 
-Shortcuts: Space plays and stops when no text field has focus. Return or ⌘↩ sends the prompt. ⌥⌘↩ plays and stops from anywhere.
+Shortcuts: Space plays and stops, and ← and → jump between sections, when no text field has focus. Return or ⌘↩ sends the prompt. ⌥⌘↩ plays and stops from anywhere.
 
 ## Tests
 
