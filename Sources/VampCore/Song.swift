@@ -33,16 +33,28 @@ public struct Layer: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
-/// The music sheet: tempo plus the layers that play together.
+/// The music sheet: tempo, the layers, and optionally the sections that arrange them in time.
 public struct Song: Codable, Equatable, Sendable {
     public var title: String
     public var bpm: Double
     public var layers: [Layer]
+    /// Empty means the song is one loop where every layer plays.
+    public var sections: [Section]
 
-    public init(title: String, bpm: Double, layers: [Layer]) {
+    public init(title: String, bpm: Double, layers: [Layer], sections: [Section] = []) {
         self.title = title
         self.bpm = bpm
         self.layers = layers
+        self.sections = sections
+    }
+
+    /// Songs saved before sections existed have no `sections` key.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = try container.decode(String.self, forKey: .title)
+        bpm = try container.decode(Double.self, forKey: .bpm)
+        layers = try container.decode([Layer].self, forKey: .layers)
+        sections = try container.decodeIfPresent([Section].self, forKey: .sections) ?? []
     }
 
     public static let bpmRange: ClosedRange<Double> = 40...220
@@ -55,11 +67,19 @@ public struct Song: Codable, Equatable, Sendable {
     }
 
     /// The full Strudel program. One cycle is one bar of four beats.
-    /// - Parameter codeOverrides: code to use in place of a layer's own code, for example its last valid version.
-    public func composedCode(codeOverrides: [String: String] = [:]) -> String? {
-        let parts = audibleLayers.map { layer in
-            let code = codeOverrides[layer.id] ?? layer.code
-            return "  (\n\(code)\n  ).postgain(\(String(format: "%.2f", layer.gain)))"
+    /// - Parameters:
+    ///   - codeOverrides: a program to use in place of a layer's own, for example its last valid version.
+    ///   - onlySection: play just this section as a loop.
+    public func composedCode(codeOverrides: [String: String] = [:], onlySection: String? = nil) -> String? {
+        let looped = onlySection.flatMap(section)
+        let parts = audibleLayers.compactMap { layer -> String? in
+            let code: String?
+            if let looped {
+                code = self.code(for: layer, in: looped)
+            } else {
+                code = program(for: layer).map { codeOverrides[layer.id] ?? $0 }
+            }
+            return code.map { "  (\n\($0)\n  ).postgain(\(String(format: "%.2f", layer.gain)))" }
         }
         guard !parts.isEmpty else { return nil }
         return "setcps(\(Int(bpm.rounded()))/60/4)\nstack(\n\(parts.joined(separator: ",\n"))\n)"

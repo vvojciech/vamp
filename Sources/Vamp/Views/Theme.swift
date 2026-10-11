@@ -16,6 +16,13 @@ enum Theme {
     static let accent = Color(hex: 0xFF7A59)
     static let danger = Color(hex: 0xFF5C70)
     static let playhead = Color.white
+    static let sectionTint = Color(hex: 0xC9B8FF)
+
+    /// Section blocks cycle through soft tints so neighbours never share a colour.
+    static func sectionColor(_ index: Int) -> Color {
+        let tints: [UInt32] = [0x6E5BD6, 0x2F8F86, 0xB0613F, 0x8C4F93, 0x3C6FB0, 0x9A7A2E]
+        return Color(hex: tints[index % tints.count])
+    }
 
     static let mono = Font.system(size: 12.5, design: .monospaced)
 

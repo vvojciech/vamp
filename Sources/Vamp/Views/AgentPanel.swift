@@ -129,6 +129,10 @@ private struct ChangeChips: View {
         songs.lazy.compactMap { $0.layers.first { $0.id == id } }.first
     }
 
+    private func sectionName(_ id: String) -> String {
+        songs.lazy.compactMap { $0.section(id)?.name }.first ?? id
+    }
+
     private func describe(_ change: EditPlan.Change) -> (String, String, Color) {
         func name(_ id: String) -> String { layer(id)?.name ?? id }
         func tint(_ id: String) -> Color { layer(id).map { Theme.color(for: $0.role) } ?? Theme.muted }
@@ -138,6 +142,9 @@ private struct ChangeChips: View {
         case let .removed(id): return ("minus", name(id), Theme.muted)
         case .tempo: return ("metronome", "Tempo", Theme.muted)
         case .title: return ("textformat", "Title", Theme.muted)
+        case let .sectionAdded(id): return ("plus.rectangle", sectionName(id), Theme.sectionTint)
+        case let .sectionChanged(id): return ("rectangle.and.pencil.and.ellipsis", sectionName(id), Theme.sectionTint)
+        case let .sectionRemoved(id): return ("minus.rectangle", sectionName(id), Theme.muted)
         }
     }
 }

@@ -25,10 +25,26 @@ public enum AgentPrompt {
     than three methods, put the sound source on the first line and each group of related methods on its \
     own line, indented two spaces and starting with a dot.
 
+    SECTIONS (SONG STRUCTURE)
+    Sections arrange the song in time: intro, verse, chorus, bridge, breakdown, drop, outro. Each \
+    section has a length in bars and the list of layer ids that play in it. Sections play in order, \
+    then the song loops. With no sections, the song is one loop where every layer plays.
+    When the musician asks for a part of a song (an intro, a bridge, a build-up, "before" or "after" \
+    something), use sections. Never fake a section with a new layer. Reuse existing layers with a \
+    different layer list. Add a new layer for a section only when it needs a new sound, and give it \
+    that section_id. For different notes or rhythm in one section, use update_layer with section_id: \
+    the code then applies only in that section.
+    The first add_section on a loop song wraps the current loop as a section "Main" (8 bars), so \
+    position 0 puts the new section before it.
+
     EDIT OPS
-    add_layer: name, role, code (gain optional, default 0.8).
-    update_layer: layer_id plus only the fields that change. Code must be the full new expression.
+    add_layer: name, role, code (gain optional, default 0.8). With section_id it plays only in that \
+    section; without, it joins every section.
+    update_layer: layer_id plus only the fields that change. Code must be the full new expression. \
+    With section_id, the code is a variation for that section only.
     remove_layer: layer_id.  set_tempo: bpm (40-220).  set_title: title.
+    add_section: name, bars (default 8), layers (null = all layers), position (null = end).
+    update_section: section_id plus name, bars, layers or position.  remove_section: section_id.
     Set every unused field to null. Write the summary as one short friendly sentence.
 
     STRUDEL CHEAT SHEET

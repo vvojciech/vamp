@@ -75,7 +75,7 @@ public extension EditPlan.Change {
     var layerID: String? {
         switch self {
         case let .added(id), let .changed(id): id
-        case .removed, .tempo, .title: nil
+        case .removed, .tempo, .title, .sectionAdded, .sectionChanged, .sectionRemoved: nil
         }
     }
 }
