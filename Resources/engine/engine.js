@@ -159,6 +159,12 @@
       analyser = master.context.createAnalyser();
       analyser.fftSize = 2048;
       master.connect(analyser);
+      // WebKit stops processing a node whose output goes nowhere, so the analyser would freeze.
+      // A silent path to the speakers keeps it running.
+      const mute = master.context.createGain();
+      mute.gain.value = 0;
+      analyser.connect(mute);
+      mute.connect(master.context.destination);
       tapped = master;
     }
     return analyser;
@@ -196,5 +202,5 @@
   }, 250);
   clock.unref?.();
 
-  globalThis.vamp = { init, analyze, play, stop, now, level, setKnownSounds };
+  globalThis.vamp = { init, analyze, play, stop, now, level, setKnownSounds, repl: () => repl };
 })();

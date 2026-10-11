@@ -10,7 +10,20 @@ final class StrudelEngine: NSObject, ObservableObject, WKScriptMessageHandler {
     enum Status: Equatable { case loading, ready, failed(String) }
 
     @Published private(set) var status: Status = .loading
-    @Published private(set) var isPlaying = false
+    @Published private(set) var isPlaying = false {
+        didSet {
+            guard isPlaying != oldValue else { return }
+            // App Nap slows the timers of an app in the background, which would stall the music.
+            if isPlaying {
+                playbackActivity = ProcessInfo.processInfo.beginActivity(
+                    options: [.userInitiated, .latencyCritical], reason: "Playing music")
+            } else if let activity = playbackActivity {
+                ProcessInfo.processInfo.endActivity(activity)
+                playbackActivity = nil
+            }
+        }
+    }
+    private var playbackActivity: NSObjectProtocol?
     @Published private(set) var lastPlayError: String?
     let webView: WKWebView
 
@@ -18,6 +31,13 @@ final class StrudelEngine: NSObject, ObservableObject, WKScriptMessageHandler {
         let config = WKWebViewConfiguration()
         config.mediaTypesRequiringUserActionForPlayback = []
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
+        // Strudel schedules notes from a timer every 50-100 ms, about 0.1 s ahead. WebKit throttles the
+        // timers of a hidden or inactive page to once per second, so almost every note is lost while
+        // the audio clock keeps running. Turn all of that off for the engine page.
+        config.preferences.inactiveSchedulingPolicy = .none
+        Self.setPrivatePreference(config.preferences, "_setHiddenPageDOMTimerThrottlingEnabled:", false)
+        Self.setPrivatePreference(config.preferences, "_setHiddenPageDOMTimerThrottlingAutoIncreases:", false)
+        Self.setPrivatePreference(config.preferences, "_setPageVisibilityBasedProcessSuppressionEnabled:", false)
         webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 4, height: 4), configuration: config)
         super.init()
         config.userContentController.add(WeakHandler(self), name: "vamp")
@@ -26,6 +46,15 @@ final class StrudelEngine: NSObject, ObservableObject, WKScriptMessageHandler {
         } else {
             status = .failed("The engine files are missing from the app bundle.")
         }
+    }
+
+    /// Calls a private WKPreferences setter only when it exists, so a WebKit update cannot crash the app.
+    private static func setPrivatePreference(_ preferences: WKPreferences, _ selectorName: String, _ value: Bool) {
+        let selector = NSSelectorFromString(selectorName)
+        guard preferences.responds(to: selector) else { return }
+        typealias Setter = @convention(c) (AnyObject, Selector, Bool) -> Void
+        let setter = unsafeBitCast(preferences.method(for: selector), to: Setter.self)
+        setter(preferences, selector, value)
     }
 
     /// Note events per layer for the first `cycles` bars, or an error message per layer.

@@ -20,7 +20,7 @@ struct ContentView: View {
         }
         .ignoresSafeArea(.container, edges: .top)
         .background(Theme.window)
-        .background(EngineHost(webView: app.engine.webView).frame(width: 1, height: 1).opacity(0))
+        .background(EngineHost(webView: app.engine.webView).frame(width: 1, height: 1).opacity(0.01))
         .preferredColorScheme(.dark)
         .frame(minWidth: 1080, minHeight: 640)
         .onChange(of: app.engine.status) { _, status in
