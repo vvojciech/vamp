@@ -27,10 +27,15 @@ public enum Critique {
     progression, voice leading, bass against chords), groove (drum programming, syncopation, fills, \
     dynamics), melody (a hook, its shape, its development), sound (sound choice, envelopes, filters, \
     space, movement), mix (levels, registers, stereo, clutter).
+    STRUDEL FACTS. .voicing() already voice-leads chords smoothly around .anchor(). Named samples \
+    are real recordings (piano is a Steinway, banks such as LinnDrum and RolandTR909 are those drum \
+    machines). .duckorbit(n) on the kick sidechains every layer on .orbit(n). Strudel has no vocals, \
+    no reversed audio and no EQ bands beyond lpf, hpf and bpf. Only suggest changes Strudel can do.
     The MEASURED scores come from analysis of the actual notes. Never score an aspect higher than \
-    its measured score plus 1. For each aspect write up to 3 notes. Each note is one concrete change \
-    that names the layer or section and what to write, for example "Chorus: give Lead a variation \
-    that lifts the motif an octave". Write a one-sentence verdict.
+    its measured score plus 1. Write notes only for problems a listener would notice, at most 3 per \
+    aspect, most important first. Each note is one concrete change that names the layer or section \
+    and what to write, for example "Chorus 2: give Lead a variation that lifts the motif an octave". \
+    When an aspect has no real problem left, give it 9 or 10 and no notes. Write a one-sentence verdict.
     """
 
     public static func prompt(song: Song, measured: Scorecard) -> String {

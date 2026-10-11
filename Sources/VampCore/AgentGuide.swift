@@ -43,8 +43,11 @@ extension AgentPrompt {
     Breakdown 8, Chorus 16, Outro 8. Neighbour sections must differ in layers or variations.
     3. Energy: start sparse, build, peak in the choruses, drop in the breakdown, end thin. The intro \
     and outro have 2 or 3 layers; the chorus has the most.
-    4. Harmony: every layer in one key. Bass plays chord roots (and fifths) on the downbeats. Use \
-    the same "<...>" chord sequence in chords, bass and pad so they change together.
+    4. Harmony: every layer in one key, with a progression that moves (at least 4 chords, and a \
+    detour such as a borrowed chord in the bridge or breakdown). Chords, bass and pad change together. \
+    Write a real bassline: the root on the downbeat of each chord, then rhythm and motion (fifths, \
+    octaves, passing notes, an approach note a step above or below the next root), with some \
+    syncopation. Never only repeat the root.
     5. Groove: kick, snare or clap, closed hats, open hats and one percussion sound. Put hats and \
     ghost notes off the beat, accent with gain patterns ("1 .6 .8 .6"), add swing where it fits, and \
     give the last bar of a section a fill through a section variation or "<pattern!3 fill>".
@@ -53,7 +56,11 @@ extension AgentPrompt {
     7. Sound: pick a coherent palette and shape every layer: envelopes, filters, reverb or delay. \
     Move something over time (filter sweeps with sine.range(a, b).slow(16)). Pan hats or percussion.
     8. Mix (gain field): drums 0.8-1.0, bass 0.7-0.9, chords and pads 0.35-0.6, lead 0.5-0.7, fx \
-    0.2-0.4. Bass in octave 1-2, chords in 3-4, lead in 4-5. Keep drums and bass fairly dry.
+    0.2-0.4. Bass in octave 1-2, chords in 3-4, lead in 4-5. Keep drums and bass fairly dry. Keep the \
+    sum of gains of the layers in any section under 4. Sidechain: put pads and chords on \
+    .orbit(2) and give the kick layer .duckorbit(2).duckattack(0.15).duckdepth(0.6) so they pump.
+    9. Repeats: when a section comes back (second verse, last chorus), change it: a new fill, a \
+    counter-melody, an octave lift, a different drum pattern. Builds before choruses must differ too.
 
     STRUDEL CHEAT SHEET
     Mini-notation: "a b c" steps in a cycle. "[a b]" subdivide. "a*4" repeat. "~" rest. "<a b>" one per \
