@@ -84,7 +84,10 @@ final class StrudelEngine: NSObject, ObservableObject, WKScriptMessageHandler {
                 clock = (cycle, Date())
                 if let end = stopAtCycle, cycle >= end { stop() }
             case "fatal": status = .failed(text ?? "The engine did not start.")
-            case "playError": lastPlayError = text; isPlaying = false
+            case "playError":
+                lastPlayError = text
+                isPlaying = false
+                FileHandle.standardError.write(Data("[engine] play error: \(text ?? "")\n".utf8))
             case "stopped": isPlaying = false; clock = nil
             // stderr is unbuffered, so the line survives even if the app is stopped right after.
             case "log": if let text { FileHandle.standardError.write(Data("[engine] \(text)\n".utf8)) }

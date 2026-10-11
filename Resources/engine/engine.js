@@ -109,8 +109,9 @@
       });
       // Strudel registers its audio worklets (crush, coarse, shape, ...) only on the first mouse-down
       // in the page. Nobody clicks the hidden web view, so register them now; without them every
-      // note that uses such an effect is dropped.
-      await S.initAudio();
+      // note that uses such an effect is dropped. Only the worklets: the rest of initAudio()
+      // silenced reverb.
+      await S.loadWorklets();
       setKnownSounds(Object.keys(S.soundMap.get()));
       post({ type: 'ready', sounds: knownSounds.size });
       post({ type: 'log', message: `ready with ${knownSounds.size} sounds` });
@@ -124,9 +125,17 @@
       post({ type: 'log', message: `Samples did not load from ${pack}: ${error?.message ?? error}` }))));
   }
 
+  // Strudel creates an orbit on its first note. A kick that ducks orbit 2 before anything has played
+  // on orbit 2 gets "duck target orbit 2 does not exist" and is dropped, so create the orbits first.
+  function ensureOrbits() {
+    const controller = S.getSuperdoughAudioController?.();
+    for (let orbit = 1; orbit <= 8; orbit++) controller?.getOrbit(orbit);
+  }
+
   async function play(code) {
     try {
       await S.getAudioContext().resume();
+      ensureOrbits();
       await repl.evaluate(code, true);
       post({ type: 'playing' });
     } catch (error) {
@@ -139,15 +148,41 @@
     post({ type: 'stopped' });
   }
 
-  /// Peak and RMS of what is playing now, 0 to 1. Zero means silence.
-  function level() {
-    const analyser = globalThis.vampAnalyser;
-    if (!analyser) return { peak: 0, rms: 0 };
+  // Taps Strudel's master gain (everything that reaches the speakers) into an analyser. The master
+  // node is rebuilt on reset, so check it on every read. No global patching of AudioNode.
+  let analyser = null;
+  let tapped = null;
+  function masterAnalyser() {
+    const master = S.getSuperdoughAudioController?.()?.output?.destinationGain;
+    if (!master) return null;
+    if (master !== tapped) {
+      analyser = master.context.createAnalyser();
+      analyser.fftSize = 2048;
+      master.connect(analyser);
+      tapped = master;
+    }
+    return analyser;
+  }
+
+  // Peak hold: sample the output every 20 ms, so a 10 ms click between two reads still counts.
+  let held = { peak: 0, rms: 0 };
+  const meter = setInterval(() => {
+    if (!repl) return;
+    const analyser = masterAnalyser();
+    if (!analyser) return;
     const samples = new Float32Array(analyser.fftSize);
     analyser.getFloatTimeDomainData(samples);
     let peak = 0, sum = 0;
     for (const s of samples) { peak = Math.max(peak, Math.abs(s)); sum += s * s; }
-    return { peak, rms: Math.sqrt(sum / samples.length) };
+    held = { peak: Math.max(held.peak, peak), rms: Math.max(held.rms, Math.sqrt(sum / samples.length)) };
+  }, 20);
+  meter.unref?.();
+
+  /// The loudest peak and RMS since the last call, 0 to 1. Zero means silence.
+  function level() {
+    const result = held;
+    held = { peak: 0, rms: 0 };
+    return result;
   }
 
   function now() {

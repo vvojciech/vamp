@@ -17,18 +17,6 @@
       original(...args);
     };
   }
-  // Tap everything that reaches the speakers into one analyser, so the app can measure the level.
-  const connect = AudioNode.prototype.connect;
-  AudioNode.prototype.connect = function (target, ...rest) {
-    if (target instanceof AudioDestinationNode) {
-      if (!window.vampAnalyser || window.vampAnalyser.context !== target.context) {
-        window.vampAnalyser = target.context.createAnalyser();
-        window.vampAnalyser.fftSize = 2048;
-      }
-      connect.call(this, window.vampAnalyser);
-    }
-    return connect.call(this, target, ...rest);
-  };
 
 </script>
 <script src="strudel.js"></script>

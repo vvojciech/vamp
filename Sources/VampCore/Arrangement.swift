@@ -50,6 +50,13 @@ public extension Song {
         }?.0
     }
 
+    /// Where a layer is first heard: the start of its first section, 0 in a loop, nil if it never plays.
+    func firstBar(whereLayerPlays id: String) -> Int? {
+        guard layers.contains(where: { $0.id == id }) else { return nil }
+        guard !sections.isEmpty else { return 0 }
+        return zip(sections, sectionStarts).first { $0.0.layerIDs.contains(id) }?.1
+    }
+
     func nextSectionStart(after bar: Double) -> Int? {
         sectionStarts.first { Double($0) > bar }
     }

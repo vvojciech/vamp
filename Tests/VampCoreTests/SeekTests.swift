@@ -51,6 +51,16 @@ private let song = Song(title: "S", bpm: 120, layers: [
         }
     }
 
+    @Test func aLayerFirstPlaysAtTheStartOfItsFirstSection() {
+        let arranged = Song(title: "S", bpm: 120, layers: song.layers + [Layer(id: "pad", name: "Pad", role: .pad, code: "x")],
+                            sections: song.sections.map { s in var s = s; if s.id == "chorus" { s.layerIDs.append("pad") }; return s })
+        #expect(arranged.firstBar(whereLayerPlays: "kick") == 0)
+        #expect(arranged.firstBar(whereLayerPlays: "pad") == 24)
+        #expect(arranged.firstBar(whereLayerPlays: "ghost") == nil)
+        let loop = Song(title: "L", bpm: 120, layers: song.layers)
+        #expect(loop.firstBar(whereLayerPlays: "kick") == 0)
+    }
+
     @Test func playbackFromABarEndsAtTheSameSongTime() {
         #expect(song.playbackEnd(tailBars: 2, loopingSection: nil, startBar: 8) == 26)  // 32 + 2 - 8
         #expect(song.playbackEnd(tailBars: 2, loopingSection: nil) == 34)
