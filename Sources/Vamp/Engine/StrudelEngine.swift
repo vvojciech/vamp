@@ -4,14 +4,6 @@ import VampCore
 import WebKit
 
 /// One note or hit, as the score draws it. Times are in cycles (bars).
-struct NoteEvent: Decodable, Hashable {
-    var begin: Double
-    var end: Double
-    var midi: Double?
-    var sound: String?
-    var gain: Double
-}
-
 /// Hosts Strudel in a hidden web view. Strudel does the sound; Swift does everything visible.
 @MainActor @Observable
 final class StrudelEngine: NSObject, WKScriptMessageHandler {
